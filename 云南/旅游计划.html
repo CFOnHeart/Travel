@@ -310,6 +310,67 @@
     .flight .price { text-align: left; }
     .hotel-card img { width: 100%; height: 200px; }
   }
+
+  /* ===== 主内容 Tab ===== */
+  .main-tabs {
+    position: relative; z-index: 3; max-width: 860px; margin: -34px auto 0; padding: 0 20px;
+    display: flex; gap: 10px; justify-content: center;
+  }
+  .main-tab {
+    flex: 0 0 auto; min-width: 140px; text-align: center;
+    background: #fff; border: 1px solid var(--line); color: var(--muted);
+    border-radius: 999px; padding: 11px 26px; font-size: 1rem; font-weight: 800;
+    cursor: pointer; font-family: inherit; box-shadow: var(--shadow); transition: all .15s;
+  }
+  .main-tab:hover { color: var(--primary); }
+  .main-tab.active { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: #fff; border-color: transparent; }
+  .main-panel { display: none; }
+  .main-panel.active { display: block; }
+  .wrap.main-panel { margin-top: 22px; }
+
+  /* ===== 花销看板 ===== */
+  .exp-head { text-align: center; margin-bottom: 6px; }
+  .exp-head h2 { font-size: 1.5rem; font-weight: 800; color: var(--primary); }
+  .exp-head p { color: var(--muted); font-size: .92rem; margin-top: 4px; }
+  .exp-grand {
+    display: inline-block; margin-top: 10px; background: #fff3ea; color: #b5641f;
+    border: 1px solid #ffddc4; border-radius: 999px; padding: 6px 18px; font-weight: 800;
+  }
+  .exp-board { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 22px; }
+  .exp-col { background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 14px 12px 18px; display: flex; flex-direction: column; }
+  .exp-col .p-head { text-align: center; padding-bottom: 10px; border-bottom: 2px solid var(--line); margin-bottom: 12px; }
+  .exp-col .p-name { font-size: 1.05rem; font-weight: 800; color: var(--text); }
+  .exp-col .p-total { font-size: 1.15rem; font-weight: 800; color: var(--accent); margin-top: 2px; }
+  .exp-col .p-total small { color: var(--muted); font-size: .72rem; font-weight: 500; }
+  .add-exp {
+    width: 100%; margin-bottom: 14px; background: #eafaf4; color: var(--primary);
+    border: 1px dashed #bfe6d8; border-radius: 10px; padding: 8px; font-size: .85rem; font-weight: 700;
+    cursor: pointer; font-family: inherit;
+  }
+  .add-exp:hover { background: #dff4ec; }
+  .exp-timeline { position: relative; flex: 1; padding-left: 18px; }
+  .exp-timeline::before { content: ""; position: absolute; left: 5px; top: 4px; bottom: 4px; width: 2px; background: linear-gradient(var(--primary-light), var(--accent-2)); border-radius: 2px; }
+  .exp-empty { color: var(--muted); font-size: .82rem; text-align: center; padding: 12px 0; }
+  .exp-item { position: relative; margin-bottom: 14px; }
+  .exp-item::before { content: ""; position: absolute; left: -16px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: #fff; border: 3px solid var(--primary-light); }
+  .exp-item .e-time { font-size: .72rem; color: var(--muted); }
+  .exp-item .e-amt { font-size: 1.05rem; font-weight: 800; color: var(--accent); }
+  .exp-item .e-note { font-size: .84rem; color: #3a5850; word-break: break-word; }
+  .exp-item .e-del { position: absolute; right: 0; top: 2px; color: #c0561f; font-size: .78rem; cursor: pointer; opacity: 0; transition: opacity .15s; }
+  .exp-item:hover .e-del { opacity: 1; }
+
+  .modal input[type=number], .modal input[type=datetime-local] {
+    width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px;
+    font-family: inherit; font-size: .95rem; color: var(--text); background: #fff;
+  }
+  .modal input[type=datetime-local] { color-scheme: light; }
+
+  @media (max-width: 720px) {
+    .exp-board { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 420px) {
+    .exp-board { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body>
@@ -360,7 +421,12 @@
         <div class="dates">📅 2026年7月17日 — 7月25日 · 9天</div>
       </header>
 
-      <main class="wrap">
+      <div class="main-tabs">
+        <button class="main-tab active" type="button" data-mtab="trip">🗺️ 行程</button>
+        <button class="main-tab" type="button" data-mtab="expense">💰 花销</button>
+      </div>
+
+      <main class="wrap main-panel active" id="mpanel-trip">
 
         <!-- 1. 去程航班 -->
         <section class="section">
@@ -558,6 +624,15 @@
 
       </main>
 
+      <section class="wrap main-panel" id="mpanel-expense">
+        <div class="exp-head">
+          <h2>💰 花销登记</h2>
+          <p>每人一列，按时间从上往下延伸，方便横向对比。数据实时同步云端。</p>
+          <div class="exp-grand" id="expGrand">总花销 ¥0</div>
+        </div>
+        <div class="exp-board" id="expBoard"></div>
+      </section>
+
       <footer>
         🌿 云南度假计划 · 具体价格与航班请以实时预订为准 · 祝旅途愉快！
       </footer>
@@ -586,6 +661,24 @@
 
   <!-- 图片放大 -->
   <div class="lightbox" id="lightbox"><img id="lightboxImg" src="" alt=""></div>
+
+  <!-- 花销弹窗 -->
+  <div class="modal-mask" id="expModal">
+    <div class="modal">
+      <h3 id="expTitle">记一笔</h3>
+      <div class="m-meta" id="expWho"></div>
+      <label>金额（¥）</label>
+      <input type="number" id="expAmount" min="0" step="0.01" placeholder="例如 128.5">
+      <label>说明</label>
+      <input type="text" id="expNote" placeholder="例如：午餐 / 门票 / 加油">
+      <label>时间</label>
+      <input type="datetime-local" id="expTime">
+      <div class="modal-actions">
+        <button class="btn ghost" id="expCancel">取消</button>
+        <button class="btn primary" id="expSave">保存</button>
+      </div>
+    </div>
+  </div>
 
   <script>
   (function () {
@@ -864,6 +957,124 @@
     // 自动同步：切回页面时刷新 + 每 30 秒轮询（弹窗打开时不打扰）
     window.addEventListener('focus', () => { if (!mask.classList.contains('open')) loadFromServer(); });
     setInterval(() => { if (!mask.classList.contains('open') && document.visibilityState === 'visible') loadFromServer(); }, 30000);
+
+    // ============ 💰 花销登记 ============
+    const PEOPLE = ['Wenwen', 'Kun', 'Yiming', 'Jun'];
+    let expenses = [];
+    let expLoaded = false;
+
+    function pad(n) { return (n < 10 ? '0' : '') + n; }
+    function toInputValue(d) {
+      return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
+        'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    }
+    function fmtTime(iso) {
+      const d = new Date(iso); if (isNaN(d)) return iso || '';
+      return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    }
+
+    async function loadExpenses() {
+      try {
+        const r = await fetch(API_BASE + '/expenses', { cache: 'no-store' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const data = await r.json();
+        expenses = (data && data.items) || [];
+        renderBoard();
+      } catch (e) { renderBoard(); }
+    }
+
+    function renderBoard() {
+      const board = document.getElementById('expBoard');
+      board.innerHTML = '';
+      let grand = 0;
+      PEOPLE.forEach(person => {
+        const list = expenses.filter(e => e.person === person)
+          .sort((a, b) => new Date(a.time) - new Date(b.time));
+        const total = list.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+        grand += total;
+        const col = document.createElement('div'); col.className = 'exp-col';
+        let html =
+          '<div class="p-head"><div class="p-name">' + esc(person) + '</div>' +
+          '<div class="p-total">¥' + total.toFixed(2).replace(/\.00$/, '') + ' <small>总花销</small></div></div>' +
+          '<button class="add-exp" type="button" data-person="' + person + '">＋ 添加花销</button>' +
+          '<div class="exp-timeline">';
+        if (list.length === 0) {
+          html += '<div class="exp-empty">还没有记录</div>';
+        } else {
+          list.forEach(e => {
+            html += '<div class="exp-item" data-id="' + esc(e.id) + '">' +
+              '<span class="e-del" title="删除">✕</span>' +
+              '<div class="e-time">🕒 ' + esc(fmtTime(e.time)) + '</div>' +
+              '<div class="e-amt">¥' + (Number(e.amount) || 0).toFixed(2).replace(/\.00$/, '') + '</div>' +
+              (e.note ? '<div class="e-note">' + esc(e.note) + '</div>' : '') +
+              '</div>';
+          });
+        }
+        html += '</div>';
+        col.innerHTML = html;
+        col.querySelector('.add-exp').addEventListener('click', () => openExpModal(person));
+        col.querySelectorAll('.exp-item').forEach(it => {
+          it.querySelector('.e-del').addEventListener('click', () => deleteExpense(it.dataset.id));
+        });
+        board.appendChild(col);
+      });
+      document.getElementById('expGrand').textContent = '总花销 ¥' + grand.toFixed(2).replace(/\.00$/, '');
+    }
+
+    // ---- 花销弹窗 ----
+    const expMask = document.getElementById('expModal');
+    let expPerson = null;
+    function openExpModal(person) {
+      expPerson = person;
+      document.getElementById('expTitle').textContent = '记一笔 · ' + person;
+      document.getElementById('expWho').textContent = '为 ' + person + ' 添加一笔花销';
+      document.getElementById('expAmount').value = '';
+      document.getElementById('expNote').value = '';
+      document.getElementById('expTime').value = toInputValue(new Date());
+      expMask.classList.add('open');
+      setTimeout(() => document.getElementById('expAmount').focus(), 50);
+    }
+    document.getElementById('expCancel').addEventListener('click', () => expMask.classList.remove('open'));
+    expMask.addEventListener('click', e => { if (e.target === expMask) expMask.classList.remove('open'); });
+    document.getElementById('expSave').addEventListener('click', async () => {
+      const amount = parseFloat(document.getElementById('expAmount').value);
+      if (!isFinite(amount) || amount < 0) { alert('请输入有效金额'); return; }
+      const note = document.getElementById('expNote').value.trim();
+      const tv = document.getElementById('expTime').value;
+      const time = tv ? new Date(tv).toISOString() : new Date().toISOString();
+      const btn = document.getElementById('expSave'); btn.disabled = true; btn.textContent = '保存中…';
+      try {
+        const r = await fetch(API_BASE + '/expenses', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ person: expPerson, amount: amount, note: note, time: time })
+        });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        expMask.classList.remove('open');
+        await loadExpenses();
+      } catch (e) {
+        alert('保存失败：' + e.message);
+      } finally { btn.disabled = false; btn.textContent = '保存'; }
+    });
+
+    async function deleteExpense(id) {
+      if (!confirm('删除这笔花销？')) return;
+      try {
+        const r = await fetch(API_BASE + '/expenses/' + encodeURIComponent(id), { method: 'DELETE' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        await loadExpenses();
+      } catch (e) { alert('删除失败：' + e.message); }
+    }
+
+    // ---- 主内容 Tab 切换 ----
+    document.querySelectorAll('.main-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.main-tab').forEach(b => b.classList.toggle('active', b === btn));
+        const t = btn.dataset.mtab;
+        document.getElementById('mpanel-trip').classList.toggle('active', t === 'trip');
+        document.getElementById('mpanel-expense').classList.toggle('active', t === 'expense');
+        if (t === 'expense') { if (!expLoaded) expLoaded = true; loadExpenses(); }
+      });
+    });
 
     render();          // 先用本地缓存渲染
     loadFromServer();  // 再从云端拉取最新
