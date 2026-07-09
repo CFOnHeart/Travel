@@ -4,3 +4,10 @@ Thumbs.db
 *.tmp
 _plan_tmp.*
 _topdf.js
+
+# Node / Azure Functions
+node_modules/
+api/local.settings.json
+.azure/
+bin/
+obj/

@@ -82,6 +82,76 @@
     padding: 1px 7px; border-radius: 999px; white-space: nowrap; align-self: center;
   }
 
+  /* Interactive todo */
+  .todo { flex-wrap: wrap; }
+  .todo .box { cursor: pointer; transition: transform .1s; }
+  .todo .box:hover { transform: scale(1.15); }
+  .todo .t-row2 {
+    width: 100%; display: flex; align-items: center; gap: 6px; margin-top: 7px; padding-left: 27px;
+  }
+  .todo .who-input {
+    flex: 1; min-width: 0; background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.15); border-radius: 7px;
+    color: #eaf7f2; font-size: .74rem; padding: 3px 8px; font-family: inherit;
+  }
+  .todo.done .who-input { background: rgba(23,192,139,.18); border-color: rgba(23,192,139,.5); color: #d7fff0; }
+  .todo .who-input::placeholder { color: #7fa89b; }
+  .todo .attach-btn {
+    flex-shrink: 0; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15);
+    color: #cfe; border-radius: 7px; font-size: .74rem; padding: 3px 9px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 5px; font-family: inherit;
+  }
+  .todo .attach-btn:hover { background: rgba(255,255,255,.16); }
+  .todo .attach-btn .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); display: none; }
+  .todo.has-attach .attach-btn .dot { display: inline-block; }
+
+  .sidebar-actions { margin-top: 10px; }
+  .mini-btn {
+    background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.15);
+    color: #b9d8cd; border-radius: 8px; padding: 6px 14px; font-size: .78rem; cursor: pointer; font-family: inherit;
+  }
+  .mini-btn:hover { background: rgba(255,255,255,.14); }
+  .sync-status { font-size: .72rem; color: #8fbfb0; margin-left: 8px; }
+  .sync-status.saving { color: #ffd08a; }
+  .sync-status.error { color: #ff9d8a; }
+  .sidebar-note { font-size: .72rem; color: #6fa294; margin-top: 12px; line-height: 1.5; }
+
+  /* Modal */
+  .modal-mask {
+    position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 100;
+    display: none; align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal-mask.open { display: flex; }
+  .modal {
+    background: #fff; color: var(--text); border-radius: 16px; width: 440px; max-width: 100%;
+    max-height: 90vh; overflow-y: auto; padding: 22px 24px; box-shadow: 0 20px 60px rgba(0,0,0,.4);
+  }
+  .modal h3 { font-size: 1.1rem; margin-bottom: 4px; color: var(--primary); }
+  .modal .m-meta { color: var(--muted); font-size: .85rem; margin-bottom: 8px; }
+  .modal label { display: block; font-size: .82rem; font-weight: 700; color: #3a5850; margin: 14px 0 5px; }
+  .modal input[type=text], .modal textarea {
+    width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 8px 11px;
+    font-family: inherit; font-size: .92rem; color: var(--text); background: #fff;
+  }
+  .modal textarea { min-height: 70px; resize: vertical; }
+  .file-drop {
+    border: 2px dashed var(--line); border-radius: 12px; padding: 16px; text-align: center;
+    color: var(--muted); font-size: .85rem; cursor: pointer;
+  }
+  .file-drop:hover { border-color: var(--primary-light); color: var(--primary); }
+  .preview-img { margin-top: 12px; text-align: center; }
+  .preview-img img { max-width: 100%; max-height: 260px; border-radius: 10px; border: 1px solid var(--line); cursor: zoom-in; }
+  .preview-img .rm { display: inline-block; margin-top: 8px; color: #c0561f; font-size: .82rem; cursor: pointer; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 22px; }
+  .btn { flex: 1; border: none; border-radius: 10px; padding: 10px; font-size: .92rem; font-weight: 700; cursor: pointer; font-family: inherit; }
+  .btn.primary { background: var(--primary); color: #fff; }
+  .btn.ghost { background: #eef3f1; color: #3a5850; }
+
+  /* Lightbox */
+  .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.85); z-index: 120; display: none; align-items: center; justify-content: center; padding: 20px; cursor: zoom-out; }
+  .lightbox.open { display: flex; }
+  .lightbox img { max-width: 95%; max-height: 95%; border-radius: 8px; }
+
   /* Content */
   .content { flex: 1; min-width: 0; }
 
@@ -240,109 +310,17 @@
       <div class="sub">交通 · 租车 · 门票 · 住宿</div>
 
       <div class="progress-wrap">
-        <div class="progress-bar"><span style="width:33%"></span></div>
-        <div class="progress-label">已完成 3 / 9 项</div>
+        <div class="progress-bar"><span id="progressFill" style="width:0%"></span></div>
+        <div class="progress-label" id="progressLabel">已完成 0 / 0 项</div>
       </div>
 
-      <!-- 交通 -->
-      <div class="todo-group">
-        <div class="g-title">✈️ 交通</div>
-        <div class="todo done">
-          <span class="box">✓</span>
-          <div class="t-main">
-            <div class="t-name">去程机票 上海→西双版纳</div>
-            <div class="t-meta">7/17 KY3122 · ¥800/人</div>
-          </div>
-          <span class="who">淦珺</span>
-        </div>
-        <div class="todo pending">
-          <span class="box"></span>
-          <div class="t-main">
-            <div class="t-name">丽江机票 西双版纳→丽江</div>
-            <div class="t-meta">7/21 DR5051 · ¥340/人</div>
-          </div>
-          <span class="who">待定</span>
-        </div>
-        <div class="todo pending">
-          <span class="box"></span>
-          <div class="t-main">
-            <div class="t-name">返程机票 丽江→上海</div>
-            <div class="t-meta">7/25 丽江→浦东</div>
-          </div>
-          <span class="who">待定</span>
-        </div>
-      </div>
+      <div id="todoContainer"></div>
 
-      <!-- 租车 -->
-      <div class="todo-group">
-        <div class="g-title">🚗 租车</div>
-        <div class="todo pending">
-          <span class="box"></span>
-          <div class="t-main">
-            <div class="t-name">小鹏 G7 自驾</div>
-            <div class="t-meta">7/21–7/25 · 4天含保险 ≈¥1300</div>
-          </div>
-          <span class="who">待定</span>
-        </div>
+      <div class="sidebar-actions">
+        <button class="mini-btn" id="refreshBtn" title="从云端同步最新状态">🔄 刷新</button>
+        <span class="sync-status" id="syncStatus"></span>
       </div>
-
-      <!-- 门票 -->
-      <div class="todo-group">
-        <div class="g-title">🎫 旅游门票</div>
-        <div class="todo pending">
-          <span class="box"></span>
-          <div class="t-main">
-            <div class="t-name">玉龙雪山 / 蓝月谷</div>
-            <div class="t-meta">7/21 丽江</div>
-          </div>
-          <span class="who">待定</span>
-        </div>
-        <div class="todo pending">
-          <span class="box"></span>
-          <div class="t-main">
-            <div class="t-name">泸沽湖景区</div>
-            <div class="t-meta">7/22–7/24</div>
-          </div>
-          <span class="who">待定</span>
-        </div>
-      </div>
-
-      <!-- 住宿 -->
-      <div class="todo-group">
-        <div class="g-title">🏨 每天住宿</div>
-        <div class="todo done">
-          <span class="box">✓</span>
-          <div class="t-main">
-            <div class="t-name">西双版纳 · 温德姆至尊</div>
-            <div class="t-meta">7/17–7/21 共4晚 · 豪华大床房</div>
-          </div>
-          <span class="who">淦珺</span>
-        </div>
-        <div class="todo pending">
-          <span class="box"></span>
-          <div class="t-main">
-            <div class="t-name">丽江古镇住宿</div>
-            <div class="t-meta">7/21 共1晚 · ≈¥300/间</div>
-          </div>
-          <span class="who">待定</span>
-        </div>
-        <div class="todo done">
-          <span class="box">✓</span>
-          <div class="t-main">
-            <div class="t-name">泸沽湖 · 前湖月遥全湖景</div>
-            <div class="t-meta">7/22–7/24 共2晚 · 湖景露台大床房</div>
-          </div>
-          <span class="who">雯雯</span>
-        </div>
-        <div class="todo pending">
-          <span class="box"></span>
-          <div class="t-main">
-            <div class="t-name">束河古镇 / 机场旁住宿</div>
-            <div class="t-meta">7/24 共1晚</div>
-          </div>
-          <span class="who">待定</span>
-        </div>
-      </div>
+      <div class="sidebar-note">☁️ 勾选、完成人与附件会实时同步到云端，同伴刷新即可看到。</div>
     </aside>
 
     <!-- ===== 主内容 ===== -->
@@ -556,5 +534,242 @@
       </footer>
     </div>
   </div>
+
+  <!-- 附件弹窗 -->
+  <div class="modal-mask" id="attachModal">
+    <div class="modal">
+      <h3 id="mTitle">附件</h3>
+      <div class="m-meta" id="mMeta"></div>
+      <label>完成人</label>
+      <input type="text" id="mWho" placeholder="填写完成人姓名">
+      <label>文字说明（可选）</label>
+      <textarea id="mNote" placeholder="例如：已在携程下单，订单号 12345…"></textarea>
+      <label>图片证明（可选）</label>
+      <div class="file-drop" id="mDrop">📷 点击上传图片（订单截图 / 凭证）</div>
+      <input type="file" id="mFile" accept="image/*" hidden>
+      <div class="preview-img" id="mPreview"></div>
+      <div class="modal-actions">
+        <button class="btn ghost" id="mCancel">取消</button>
+        <button class="btn primary" id="mSave">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 图片放大 -->
+  <div class="lightbox" id="lightbox"><img id="lightboxImg" src="" alt=""></div>
+
+  <script>
+  (function () {
+    // ☁️ 云端后端 API（Azure Functions）
+    const API_BASE = 'https://func-yntravel-ue8266.azurewebsites.net/api';
+    const STORE_KEY = 'yn-travel-v1'; // 本地缓存，离线兜底
+
+    const GROUPS = [
+      { title: '✈️ 交通', items: [
+        { id: 't-out',  name: '去程机票 上海→西双版纳', meta: '7/17 KY3122 · ¥800/人', done: true,  who: '淦珺' },
+        { id: 't-lj',   name: '丽江机票 西双版纳→丽江', meta: '7/21 DR5051 · ¥340/人', done: false, who: '' },
+        { id: 't-back', name: '返程机票 丽江→上海',     meta: '7/25 丽江→浦东',       done: false, who: '' },
+      ]},
+      { title: '🚗 租车', items: [
+        { id: 'car', name: '小鹏 G7 自驾', meta: '7/21–7/25 · 4天含保险 ≈¥1300', done: false, who: '' },
+      ]},
+      { title: '🎫 旅游门票', items: [
+        { id: 'tk-snow', name: '玉龙雪山 / 蓝月谷', meta: '7/21 丽江',    done: false, who: '' },
+        { id: 'tk-lugu', name: '泸沽湖景区',       meta: '7/22–7/24',   done: false, who: '' },
+      ]},
+      { title: '🏨 每天住宿', items: [
+        { id: 'h-xsbn',  name: '西双版纳 · 温德姆至尊',      meta: '7/17–7/21 共4晚 · 豪华大床房',    done: true,  who: '淦珺' },
+        { id: 'h-lj',    name: '丽江古镇住宿',              meta: '7/21 共1晚 · ≈¥300/间',          done: false, who: '' },
+        { id: 'h-lugu',  name: '泸沽湖 · 前湖月遥全湖景',    meta: '7/22–7/24 共2晚 · 湖景露台大床房', done: true,  who: '雯雯' },
+        { id: 'h-shuhe', name: '束河古镇 / 机场旁住宿',      meta: '7/24 共1晚',                     done: false, who: '' },
+      ]},
+    ];
+
+    let state = {};
+    try { state = JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch (e) { state = {}; }
+
+    function itemState(item) {
+      if (!state[item.id]) state[item.id] = { done: item.done, who: item.who || '', note: '', img: '' };
+      return state[item.id];
+    }
+    function cacheLocal() {
+      try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* ignore */ }
+    }
+    function esc(s) { return (s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+    // ---- 同步状态提示 ----
+    const statusEl = document.getElementById('syncStatus');
+    let pending = 0;
+    function setStatus(kind, text) { statusEl.className = 'sync-status ' + (kind || ''); statusEl.textContent = text || ''; }
+
+    // ---- 云端读写 ----
+    async function loadFromServer() {
+      setStatus('saving', '同步中…');
+      try {
+        const r = await fetch(API_BASE + '/state', { cache: 'no-store' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const data = await r.json();
+        const items = (data && data.items) || {};
+        // 服务端数据覆盖到本地默认
+        GROUPS.forEach(g => g.items.forEach(item => {
+          const s = itemState(item);
+          if (items[item.id]) {
+            s.done = !!items[item.id].done;
+            s.who = items[item.id].who || '';
+            s.note = items[item.id].note || '';
+            s.img = items[item.id].img || '';
+          }
+        }));
+        cacheLocal();
+        render();
+        setStatus('', '已同步 ✓');
+        setTimeout(() => { if (statusEl.textContent === '已同步 ✓') setStatus('', ''); }, 2000);
+      } catch (e) {
+        render();
+        setStatus('error', '离线（用本地缓存）');
+      }
+    }
+
+    async function pushItem(id) {
+      const s = state[id]; if (!s) return;
+      pending++; setStatus('saving', '保存中…');
+      try {
+        const r = await fetch(API_BASE + '/state', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: id, done: !!s.done, who: s.who || '', note: s.note || '', img: s.img || '' })
+        });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        cacheLocal();
+        pending--; if (pending <= 0) { pending = 0; setStatus('', '已保存 ✓'); setTimeout(() => { if (statusEl.textContent === '已保存 ✓') setStatus('', ''); }, 1500); }
+      } catch (e) {
+        pending--; setStatus('error', '保存失败，请重试');
+      }
+    }
+
+    async function uploadImage(id, dataUrl) {
+      const r = await fetch(API_BASE + '/upload', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: id, dataUrl: dataUrl })
+      });
+      if (!r.ok) throw new Error('upload HTTP ' + r.status);
+      const d = await r.json();
+      return d.url;
+    }
+
+    const container = document.getElementById('todoContainer');
+    const whoTimers = {};
+    function render() {
+      container.innerHTML = '';
+      let total = 0, done = 0;
+      GROUPS.forEach(g => {
+        const gEl = document.createElement('div'); gEl.className = 'todo-group';
+        const t = document.createElement('div'); t.className = 'g-title'; t.textContent = g.title; gEl.appendChild(t);
+        g.items.forEach(item => {
+          total++;
+          const st = itemState(item);
+          if (st.done) done++;
+          const row = document.createElement('div');
+          row.className = 'todo ' + (st.done ? 'done' : 'pending') + ((st.img || st.note) ? ' has-attach' : '');
+          row.innerHTML =
+            '<span class="box">' + (st.done ? '✓' : '') + '</span>' +
+            '<div class="t-main"><div class="t-name">' + esc(item.name) + '</div>' +
+            '<div class="t-meta">' + esc(item.meta) + '</div></div>' +
+            '<div class="t-row2">' +
+              '<input class="who-input" placeholder="完成人…" value="' + esc(st.who) + '">' +
+              '<button class="attach-btn" type="button">📎 附件<span class="dot"></span></button>' +
+            '</div>';
+          row.querySelector('.box').addEventListener('click', () => { st.done = !st.done; render(); pushItem(item.id); });
+          const whoIn = row.querySelector('.who-input');
+          whoIn.addEventListener('input', () => {
+            st.who = whoIn.value; cacheLocal();
+            clearTimeout(whoTimers[item.id]);
+            whoTimers[item.id] = setTimeout(() => pushItem(item.id), 600);
+          });
+          row.querySelector('.attach-btn').addEventListener('click', () => openModal(item, st));
+          gEl.appendChild(row);
+        });
+        container.appendChild(gEl);
+      });
+      document.getElementById('progressFill').style.width = (total ? Math.round(done / total * 100) : 0) + '%';
+      document.getElementById('progressLabel').textContent = '已完成 ' + done + ' / ' + total + ' 项';
+    }
+
+    // ---- 弹窗 ----
+    const mask = document.getElementById('attachModal');
+    let cur = null, curId = null, curImg = null, curImgIsNew = false;
+    function openModal(item, st) {
+      cur = st; curId = item.id; curImg = st.img || null; curImgIsNew = false;
+      document.getElementById('mTitle').textContent = item.name;
+      document.getElementById('mMeta').textContent = item.meta;
+      document.getElementById('mWho').value = st.who || '';
+      document.getElementById('mNote').value = st.note || '';
+      document.getElementById('mFile').value = '';
+      renderPreview();
+      mask.classList.add('open');
+    }
+    function renderPreview() {
+      const p = document.getElementById('mPreview');
+      if (curImg) {
+        p.innerHTML = '<img src="' + curImg + '" alt="预览"><br><span class="rm">✕ 移除图片</span>';
+        p.querySelector('img').addEventListener('click', () => openLightbox(curImg));
+        p.querySelector('.rm').addEventListener('click', () => { curImg = null; curImgIsNew = false; renderPreview(); });
+      } else { p.innerHTML = ''; }
+    }
+    document.getElementById('mDrop').addEventListener('click', () => document.getElementById('mFile').click());
+    document.getElementById('mFile').addEventListener('change', e => {
+      const f = e.target.files[0]; if (!f) return;
+      downscale(f, 1000, 0.7, dataUrl => { curImg = dataUrl; curImgIsNew = true; renderPreview(); });
+    });
+    document.getElementById('mCancel').addEventListener('click', () => mask.classList.remove('open'));
+    mask.addEventListener('click', e => { if (e.target === mask) mask.classList.remove('open'); });
+    document.getElementById('mSave').addEventListener('click', async () => {
+      const saveBtn = document.getElementById('mSave');
+      saveBtn.disabled = true; saveBtn.textContent = '保存中…';
+      try {
+        let imgUrl = cur.img || '';
+        if (curImg === null) imgUrl = '';                 // 移除了图片
+        else if (curImgIsNew) imgUrl = await uploadImage(curId, curImg); // 新图，上传得到 URL
+        cur.who = document.getElementById('mWho').value;
+        cur.note = document.getElementById('mNote').value;
+        cur.img = imgUrl;
+        render();
+        await pushItem(curId);
+        mask.classList.remove('open');
+      } catch (e) {
+        alert('保存失败：' + e.message + '\n请检查网络后重试。');
+      } finally {
+        saveBtn.disabled = false; saveBtn.textContent = '保存';
+      }
+    });
+
+    // 用 canvas 压缩图片，减小上传体积
+    function downscale(file, maxDim, quality, cb) {
+      const img = new Image(), r = new FileReader();
+      r.onload = () => { img.onload = () => {
+        let w = img.width, h = img.height;
+        if (w > maxDim || h > maxDim) { const s = maxDim / Math.max(w, h); w = Math.round(w * s); h = Math.round(h * s); }
+        const c = document.createElement('canvas'); c.width = w; c.height = h;
+        c.getContext('2d').drawImage(img, 0, 0, w, h);
+        cb(c.toDataURL('image/jpeg', quality));
+      }; img.src = r.result; };
+      r.readAsDataURL(file);
+    }
+
+    // 图片放大
+    const lb = document.getElementById('lightbox');
+    function openLightbox(src) { document.getElementById('lightboxImg').src = src; lb.classList.add('open'); }
+    lb.addEventListener('click', () => lb.classList.remove('open'));
+
+    // 刷新（从云端同步）
+    document.getElementById('refreshBtn').addEventListener('click', loadFromServer);
+
+    // 自动同步：切回页面时刷新 + 每 30 秒轮询（弹窗打开时不打扰）
+    window.addEventListener('focus', () => { if (!mask.classList.contains('open')) loadFromServer(); });
+    setInterval(() => { if (!mask.classList.contains('open') && document.visibilityState === 'visible') loadFromServer(); }, 30000);
+
+    render();          // 先用本地缓存渲染
+    loadFromServer();  // 再从云端拉取最新
+  })();
+  </script>
 </body>
 </html>
