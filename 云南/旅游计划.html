@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>云南之旅 · 西双版纳 · 丽江 · 泸沽湖 旅游计划</title>
+<style>
+  :root {
+    --primary: #0e7a5f;
+    --primary-light: #14a37f;
+    --accent: #ff8a3d;
+    --accent-2: #ffb347;
+    --bg: #f4f8f6;
+    --card: #ffffff;
+    --text: #22322d;
+    --muted: #6b7d76;
+    --line: #e3ece8;
+    --shadow: 0 8px 30px rgba(14, 122, 95, .10);
+    --sidebar-w: 320px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+  }
+  a { color: inherit; text-decoration: none; }
+
+  .layout { display: flex; align-items: flex-start; }
+
+  /* Sidebar */
+  .sidebar {
+    width: var(--sidebar-w);
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    background: #0c2d25;
+    color: #dff0ea;
+    padding: 24px 20px 40px;
+  }
+  .sidebar h2 {
+    font-size: 1.15rem; font-weight: 800; color: #fff;
+    display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+  }
+  .sidebar .sub { font-size: .8rem; color: #8fbfb0; margin-bottom: 18px; }
+  .progress-wrap { margin-bottom: 22px; }
+  .progress-bar { height: 8px; background: rgba(255,255,255,.12); border-radius: 999px; overflow: hidden; }
+  .progress-bar > span { display: block; height: 100%; width: 30%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+  .progress-label { font-size: .78rem; color: #a9d3c6; margin-top: 6px; }
+
+  .todo-group { margin-bottom: 20px; }
+  .todo-group > .g-title {
+    font-size: .82rem; text-transform: uppercase; letter-spacing: 1px;
+    color: #6fb6a2; font-weight: 700; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .todo {
+    display: flex; align-items: flex-start; gap: 9px;
+    padding: 8px 10px; border-radius: 10px; margin-bottom: 6px;
+    background: rgba(255,255,255,.04); font-size: .86rem;
+  }
+  .todo .box {
+    flex-shrink: 0; width: 18px; height: 18px; border-radius: 5px; margin-top: 2px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: .7rem; font-weight: 800;
+  }
+  .todo.done .box { background: #17c08b; color: #063; }
+  .todo.pending .box { background: rgba(255,255,255,.12); color: #cfe; border: 1px dashed rgba(255,255,255,.3); }
+  .todo .t-main { flex: 1; }
+  .todo .t-main .t-name { color: #eaf7f2; font-weight: 600; }
+  .todo .t-main .t-meta { font-size: .74rem; color: #8fbfb0; margin-top: 1px; }
+  .todo.done .who {
+    font-size: .7rem; background: #17c08b; color: #05372a;
+    padding: 1px 7px; border-radius: 999px; font-weight: 700; white-space: nowrap; align-self: center;
+  }
+  .todo.pending .who {
+    font-size: .7rem; background: rgba(255,255,255,.1); color: #b9d8cd;
+    padding: 1px 7px; border-radius: 999px; white-space: nowrap; align-self: center;
+  }
+
+  /* Content */
+  .content { flex: 1; min-width: 0; }
+
+  .hero {
+    background: linear-gradient(135deg, #0e7a5f 0%, #14a37f 55%, #2bbf9a 100%);
+    color: #fff;
+    padding: 50px 26px 84px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::after {
+    content: "🌴  🐘  ⛰️  🌊  🏮";
+    position: absolute; bottom: 14px; left: 0; right: 0;
+    font-size: 20px; opacity: .35; letter-spacing: 18px;
+  }
+  .hero h1 { font-size: 2.1rem; font-weight: 800; letter-spacing: 2px; }
+  .hero p { margin-top: 10px; font-size: 1rem; opacity: .92; }
+  .hero .dates {
+    display: inline-block; margin-top: 18px;
+    background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.35);
+    padding: 7px 20px; border-radius: 999px; font-weight: 600; backdrop-filter: blur(4px);
+  }
+
+  .wrap { max-width: 860px; margin: -56px auto 60px; padding: 0 20px; position: relative; z-index: 2; }
+
+  .section { margin-top: 32px; }
+  .section-title {
+    display: flex; align-items: center; gap: 12px;
+    font-size: 1.3rem; font-weight: 800; color: var(--primary); margin-bottom: 14px;
+  }
+  .section-title .num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #fff; font-size: .95rem; font-weight: 800;
+    box-shadow: 0 4px 12px rgba(255,138,61,.35);
+  }
+
+  .card {
+    background: var(--card); border-radius: 18px; box-shadow: var(--shadow);
+    padding: 22px 24px; border: 1px solid var(--line);
+  }
+
+  /* Flight */
+  .flight { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+  .flight .route { flex: 1; min-width: 240px; }
+  .flight .ends { display: flex; align-items: center; gap: 12px; }
+  .flight .city { text-align: center; }
+  .flight .city .time { font-size: 1.5rem; font-weight: 800; }
+  .flight .city .name { color: var(--muted); font-size: .9rem; }
+  .flight .path { flex: 1; text-align: center; color: var(--primary); min-width: 90px; }
+  .flight .path .line { border-top: 2px dashed var(--primary-light); margin: 6px 0; }
+  .flight .path .plane { font-size: 1.3rem; }
+  .flight .path small { color: var(--muted); }
+  .flight .price { text-align: right; min-width: 140px; }
+  .flight .price .tag { font-size: .78rem; color: var(--muted); }
+  .flight .price .amt { font-size: 1.6rem; font-weight: 800; color: var(--accent); }
+  .badge {
+    display: inline-block; background: #eafaf4; color: var(--primary);
+    border: 1px solid #c9ede0; border-radius: 8px;
+    padding: 2px 10px; font-size: .78rem; font-weight: 600; margin-top: 6px; margin-right: 6px;
+  }
+  .badge.warn { background: #fff2ec; color: #c0561f; border-color: #ffd3bd; }
+
+  /* Hotel */
+  .hotel-card { display: flex; flex-wrap: wrap; gap: 20px; }
+  .hotel-card img { width: 280px; max-width: 100%; height: 190px; object-fit: cover; border-radius: 14px; }
+  .hotel-card .info { flex: 1; min-width: 240px; }
+  .hotel-card h3 { font-size: 1.12rem; font-weight: 800; }
+  .hotel-card .stars { color: var(--accent-2); font-size: .92rem; margin: 4px 0 8px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+  .tags span {
+    background: #f1f6f4; color: #3a5850; font-size: .78rem;
+    padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line);
+  }
+  .price-line { display: flex; align-items: baseline; gap: 14px; margin-top: 8px; flex-wrap: wrap; }
+  .price-line .big { color: var(--accent); font-weight: 800; font-size: 1.4rem; }
+  .price-line .big small { color: var(--muted); font-weight: 500; font-size: .75rem; }
+  .price-line .total { background:#eafaf4; color:var(--primary); font-weight:700; padding:3px 12px; border-radius:999px; font-size:.85rem; }
+
+  .tip {
+    margin-top: 14px; background: #fff6ec; border: 1px solid #ffe0c2; border-radius: 12px;
+    padding: 12px 16px; color: #9a5a1f; font-weight: 600;
+    display: flex; gap: 10px; align-items: flex-start; font-size: .92rem;
+  }
+  .tip .ico { font-size: 1.2rem; }
+
+  /* Timeline */
+  .timeline { position: relative; padding-left: 30px; }
+  .timeline::before {
+    content: ""; position: absolute; left: 10px; top: 8px; bottom: 8px;
+    width: 3px; background: linear-gradient(var(--primary-light), var(--accent-2)); border-radius: 3px;
+  }
+  .tl-item { position: relative; padding: 0 0 26px 8px; }
+  .tl-item::before {
+    content: ""; position: absolute; left: -24px; top: 6px;
+    width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 3px solid var(--primary-light);
+  }
+  .tl-item .day {
+    display: inline-block; background: var(--primary); color: #fff;
+    font-size: .78rem; font-weight: 700; padding: 2px 12px; border-radius: 999px; margin-bottom: 6px;
+  }
+  .tl-item h5 { font-size: 1.05rem; font-weight: 700; }
+  .tl-item p { color: var(--muted); font-size: .93rem; }
+  .tl-item .meta-row { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font-size: .76rem; padding: 2px 10px; border-radius: 999px;
+    background: #f1f6f4; border: 1px solid var(--line); color: #3a5850;
+  }
+  .chip.cost { background: #fff3ea; border-color: #ffddc4; color: #b5641f; font-weight: 700; }
+  .chip.stay { background: #eef4ff; border-color: #d3e0ff; color: #2f5bd0; }
+  .chip.car { background: #f0f9f0; border-color: #cfe9cf; color: #2f8a3a; }
+
+  /* Cost table */
+  .cost-table { width: 100%; border-collapse: collapse; font-size: .93rem; }
+  .cost-table th, .cost-table td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  .cost-table th { color: var(--muted); font-weight: 600; font-size: .82rem; }
+  .cost-table td.amt { text-align: right; font-weight: 700; color: var(--accent); white-space: nowrap; }
+  .cost-table tr.total-row td { border-top: 2px solid var(--primary-light); border-bottom: none; font-size: 1.05rem; }
+  .cost-table tr.total-row td.amt { color: var(--primary); }
+
+  footer { text-align: center; color: var(--muted); font-size: .84rem; padding: 26px 20px 46px; }
+
+  /* Mobile sidebar toggle */
+  .menu-btn {
+    display: none; position: fixed; top: 14px; left: 14px; z-index: 50;
+    background: var(--primary); color: #fff; border: none; border-radius: 10px;
+    width: 44px; height: 44px; font-size: 1.2rem; box-shadow: var(--shadow); cursor: pointer;
+  }
+
+  @media (max-width: 900px) {
+    .menu-btn { display: block; }
+    .sidebar {
+      position: fixed; left: 0; top: 0; z-index: 40;
+      transform: translateX(-100%); transition: transform .25s ease;
+      box-shadow: 6px 0 30px rgba(0,0,0,.3);
+    }
+    .sidebar.open { transform: translateX(0); }
+    .hero { padding-top: 64px; }
+  }
+  @media (max-width: 640px) {
+    .hero h1 { font-size: 1.6rem; }
+    .flight .price { text-align: left; }
+    .hotel-card img { width: 100%; height: 200px; }
+  }
+</style>
+</head>
+<body>
+  <button class="menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</button>
+  <div class="layout">
+
+    <!-- ===== 侧边栏：预定完成事项 ===== -->
+    <aside class="sidebar">
+      <h2>📋 预定清单</h2>
+      <div class="sub">交通 · 租车 · 门票 · 住宿</div>
+
+      <div class="progress-wrap">
+        <div class="progress-bar"><span style="width:33%"></span></div>
+        <div class="progress-label">已完成 3 / 9 项</div>
+      </div>
+
+      <!-- 交通 -->
+      <div class="todo-group">
+        <div class="g-title">✈️ 交通</div>
+        <div class="todo done">
+          <span class="box">✓</span>
+          <div class="t-main">
+            <div class="t-name">去程机票 上海→西双版纳</div>
+            <div class="t-meta">7/17 KY3122 · ¥800/人</div>
+          </div>
+          <span class="who">淦珺</span>
+        </div>
+        <div class="todo pending">
+          <span class="box"></span>
+          <div class="t-main">
+            <div class="t-name">丽江机票 西双版纳→丽江</div>
+            <div class="t-meta">7/21 DR5051 · ¥340/人</div>
+          </div>
+          <span class="who">待定</span>
+        </div>
+        <div class="todo pending">
+          <span class="box"></span>
+          <div class="t-main">
+            <div class="t-name">返程机票 丽江→上海</div>
+            <div class="t-meta">7/25 丽江→浦东</div>
+          </div>
+          <span class="who">待定</span>
+        </div>
+      </div>
+
+      <!-- 租车 -->
+      <div class="todo-group">
+        <div class="g-title">🚗 租车</div>
+        <div class="todo pending">
+          <span class="box"></span>
+          <div class="t-main">
+            <div class="t-name">小鹏 G7 自驾</div>
+            <div class="t-meta">7/21–7/25 · 4天含保险 ≈¥1300</div>
+          </div>
+          <span class="who">待定</span>
+        </div>
+      </div>
+
+      <!-- 门票 -->
+      <div class="todo-group">
+        <div class="g-title">🎫 旅游门票</div>
+        <div class="todo pending">
+          <span class="box"></span>
+          <div class="t-main">
+            <div class="t-name">玉龙雪山 / 蓝月谷</div>
+            <div class="t-meta">7/21 丽江</div>
+          </div>
+          <span class="who">待定</span>
+        </div>
+        <div class="todo pending">
+          <span class="box"></span>
+          <div class="t-main">
+            <div class="t-name">泸沽湖景区</div>
+            <div class="t-meta">7/22–7/24</div>
+          </div>
+          <span class="who">待定</span>
+        </div>
+      </div>
+
+      <!-- 住宿 -->
+      <div class="todo-group">
+        <div class="g-title">🏨 每天住宿</div>
+        <div class="todo done">
+          <span class="box">✓</span>
+          <div class="t-main">
+            <div class="t-name">西双版纳 · 温德姆至尊</div>
+            <div class="t-meta">7/17–7/21 共4晚 · 豪华大床房</div>
+          </div>
+          <span class="who">淦珺</span>
+        </div>
+        <div class="todo pending">
+          <span class="box"></span>
+          <div class="t-main">
+            <div class="t-name">丽江古镇住宿</div>
+            <div class="t-meta">7/21 共1晚 · ≈¥300/间</div>
+          </div>
+          <span class="who">待定</span>
+        </div>
+        <div class="todo done">
+          <span class="box">✓</span>
+          <div class="t-main">
+            <div class="t-name">泸沽湖 · 前湖月遥全湖景</div>
+            <div class="t-meta">7/22–7/24 共2晚 · 湖景露台大床房</div>
+          </div>
+          <span class="who">雯雯</span>
+        </div>
+        <div class="todo pending">
+          <span class="box"></span>
+          <div class="t-main">
+            <div class="t-name">束河古镇 / 机场旁住宿</div>
+            <div class="t-meta">7/24 共1晚</div>
+          </div>
+          <span class="who">待定</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ===== 主内容 ===== -->
+    <div class="content">
+      <header class="hero">
+        <h1>云南度假之旅</h1>
+        <p>西双版纳 · 丽江 · 玉龙雪山 · 泸沽湖</p>
+        <div class="dates">📅 2026年7月17日 — 7月25日 · 9天</div>
+      </header>
+
+      <main class="wrap">
+
+        <!-- 1. 去程航班 -->
+        <section class="section">
+          <div class="section-title"><span class="num">1</span>去程航班</div>
+          <div class="card flight">
+            <div class="route">
+              <div class="ends">
+                <div class="city">
+                  <div class="time">19:15</div>
+                  <div class="name">上海浦东 PVG</div>
+                </div>
+                <div class="path">
+                  <small>7月17日 周五</small>
+                  <div class="line"></div>
+                  <div class="plane">✈️</div>
+                  <small>KY3122</small>
+                </div>
+                <div class="city">
+                  <div class="time">当晚</div>
+                  <div class="name">西双版纳 JHG</div>
+                </div>
+              </div>
+              <span class="badge">✅ 含行李托运</span>
+            </div>
+            <div class="price">
+              <div class="tag">机票参考价</div>
+              <div class="amt">¥800<small style="font-size:.8rem;color:var(--muted);">/人</small></div>
+              <div class="tag">左右</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2. 西双版纳住宿 -->
+        <section class="section">
+          <div class="section-title"><span class="num">2</span>西双版纳住宿（7/17–7/21 · 4晚）</div>
+          <div class="card hotel-card">
+            <img src="images/Weixin Image_20260708172730_984_15.jpg" alt="温德姆至尊酒店">
+            <div class="info">
+              <h3>温德姆至尊酒店（热带花卉园曼听公园店）</h3>
+              <div class="stars">★★★★★ · 2024年新店 · 豪华大床房</div>
+              <div class="tags">
+                <span>室内恒温泳池</span><span>亲子主题</span><span>免费健身室</span>
+                <span>早餐丰富</span><span>步行至曼听公园 1.8km</span>
+              </div>
+              <div class="price-line">
+                <div class="big">¥475 <small>/ 晚</small></div>
+                <span class="total">4晚合计 · 人均 ≈ ¥950</span>
+              </div>
+              <div class="tip">
+                <span class="ico">🩱</span>
+                <span>提醒同伴带 <b>泳衣、泳镜</b>！酒店有室内恒温泳池，没安排时就泡水、躺平度假。</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. 飞往丽江 -->
+        <section class="section">
+          <div class="section-title"><span class="num">3</span>飞往丽江</div>
+          <div class="card flight">
+            <div class="route">
+              <div class="ends">
+                <div class="city">
+                  <div class="time">07:55</div>
+                  <div class="name">西双版纳 JHG</div>
+                </div>
+                <div class="path">
+                  <small>7月21日 周二</small>
+                  <div class="line"></div>
+                  <div class="plane">✈️</div>
+                  <small>DR5051</small>
+                </div>
+                <div class="city">
+                  <div class="time">上午</div>
+                  <div class="name">丽江 LJG</div>
+                </div>
+              </div>
+              <span class="badge">含机建燃油</span>
+              <span class="badge warn">⚠️ 行李托运仅 10kg 额度，请注意</span>
+            </div>
+            <div class="price">
+              <div class="tag">机票参考价</div>
+              <div class="amt">¥340<small style="font-size:.8rem;color:var(--muted);">/人</small></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 4. 租车 -->
+        <section class="section">
+          <div class="section-title"><span class="num">4</span>机场租车 · 4天自驾</div>
+          <div class="card">
+            <div class="hotel-card" style="align-items:center;">
+              <div style="font-size:3.4rem;flex-shrink:0;">🚙</div>
+              <div class="info">
+                <h3>小鹏 G7（意向车型）</h3>
+                <div class="stars">7/21 抵达丽江机场取车 · 7/25 机场还车</div>
+                <div class="tags">
+                  <span>¥250 / 天</span><span>租期 4 天</span><span>含保险</span><span>纯电 · 需注意充电</span>
+                </div>
+                <div class="price-line">
+                  <div class="big">≈ ¥1300 <small>总价（含保险）</small></div>
+                  <span class="total">人均 ≈ ¥450</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 5. 详细行程 -->
+        <section class="section">
+          <div class="section-title"><span class="num">5</span>丽江 · 泸沽湖 详细行程</div>
+          <div class="card">
+            <div class="timeline">
+
+              <div class="tl-item">
+                <span class="day">7/21 周二 · 抵达日（最累的一天）</span>
+                <h5>玉龙雪山 / 蓝月谷 → 丽江古镇</h5>
+                <p>上午飞抵丽江、机场取车。白天前往玉龙雪山，不想爬山可只在山下欣赏蓝月谷。傍晚及晚上逛丽江古镇并入住古镇附近。若体力不支，可考虑直接回民宿休息。</p>
+                <div class="meta-row">
+                  <span class="chip car">🚗 机场取车</span>
+                  <span class="chip">🏔️ 玉龙雪山 / 蓝月谷</span>
+                  <span class="chip stay">🏨 丽江古镇 ≈¥300/间</span>
+                  <span class="chip cost">人均住宿 ≈¥150</span>
+                </div>
+              </div>
+
+              <div class="tl-item">
+                <span class="day">7/22 周三 · 前往泸沽湖</span>
+                <h5>驱车约 3 小时 · 入住湖景酒店</h5>
+                <p>开车前往泸沽湖，路程约 3 小时。入住泸沽湖前湖·月遥全湖景度假酒店（普洛码头店），高级湖景露台大床房，酒店配有充电桩。</p>
+                <div class="meta-row">
+                  <span class="chip car">🚗 车程 ≈3h</span>
+                  <span class="chip stay">🏨 月遥全湖景 · 湖景露台大床房</span>
+                  <span class="chip">🔌 有充电桩</span>
+                  <span class="chip cost">¥542/晚</span>
+                </div>
+              </div>
+
+              <div class="tl-item">
+                <span class="day">7/23 周四 · 泸沽湖</span>
+                <h5>环湖 · 湖景度假</h5>
+                <p>全天在泸沽湖游玩，环湖、观景、体验摩梭风情，继续住月遥全湖景酒店。</p>
+                <div class="meta-row">
+                  <span class="chip stay">🏨 月遥全湖景（第2晚）</span>
+                  <span class="chip cost">2晚人均 ≈¥542</span>
+                </div>
+              </div>
+
+              <div class="tl-item">
+                <span class="day">7/24 周五 · 返回丽江</span>
+                <h5>开车回丽江 · 随意逛</h5>
+                <p>开车返回丽江，随便逛逛。可在束河古镇或机场附近住一晚，方便次日还车与赶飞机。</p>
+                <div class="meta-row">
+                  <span class="chip car">🚗 返回丽江</span>
+                  <span class="chip stay">🏨 束河古镇 / 机场旁</span>
+                </div>
+              </div>
+
+              <div class="tl-item">
+                <span class="day">7/25 周六 · 返程</span>
+                <h5>机场还车 · 飞回上海浦东</h5>
+                <p>前往丽江机场办理还车，乘飞机返回上海浦东，结束云南之旅。</p>
+                <div class="meta-row">
+                  <span class="chip car">🚗 机场还车</span>
+                  <span class="chip">✈️ 丽江 → 上海浦东</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+        <!-- 6. 人均费用概览 -->
+        <section class="section">
+          <div class="section-title"><span class="num">6</span>人均费用概览</div>
+          <div class="card">
+            <table class="cost-table">
+              <thead>
+                <tr><th>项目</th><th>说明</th><th style="text-align:right;">人均</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>去程机票</td><td>上海→西双版纳 KY3122（含托运）</td><td class="amt">¥800</td></tr>
+                <tr><td>西双版纳住宿</td><td>温德姆至尊 · 4晚</td><td class="amt">¥950</td></tr>
+                <tr><td>丽江机票</td><td>西双版纳→丽江 DR5051</td><td class="amt">¥340</td></tr>
+                <tr><td>租车（小鹏G7）</td><td>4天含保险，均摊</td><td class="amt">¥450</td></tr>
+                <tr><td>丽江古镇住宿</td><td>7/21 · 1晚均摊</td><td class="amt">¥150</td></tr>
+                <tr><td>泸沽湖住宿</td><td>月遥全湖景 · 2晚均摊</td><td class="amt">¥542</td></tr>
+                <tr><td>束河/机场住宿</td><td>7/24 · 1晚</td><td class="amt">待定</td></tr>
+                <tr><td>返程机票</td><td>丽江→上海浦东</td><td class="amt">待定</td></tr>
+                <tr class="total-row"><td><b>已知合计</b></td><td>不含门票、餐饮、返程机票及末晚住宿</td><td class="amt">≈ ¥3232</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+      </main>
+
+      <footer>
+        🌿 云南度假计划 · 具体价格与航班请以实时预订为准 · 祝旅途愉快！
+      </footer>
+    </div>
+  </div>
+</body>
+</html>
