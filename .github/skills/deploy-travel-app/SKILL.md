@@ -70,7 +70,7 @@ See [deploy.ps1](./scripts/deploy.ps1). Pass `-Scope frontend` or `-Scope backen
 - [ ] `云南/index.html` is byte-identical to `云南/旅游计划.html`.
 - [ ] `git push` succeeded (no rejected/non-fast-forward).
 - [ ] Pages URL returns 200 and shows the new content.
-- [ ] `func publish` listed the 3 functions (getState, putState, upload).
+- [ ] `func publish` listed the 6 functions (getState, putState, upload, getExpenses, addExpense, deleteExpense).
 - [ ] `GET /api/state` returns JSON.
 
 ## Notes / Pitfalls

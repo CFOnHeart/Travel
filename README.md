@@ -41,29 +41,34 @@ Travel/
 
 ### 技术
 - 纯 **HTML + CSS + 原生 JavaScript**，无框架、无构建步骤。
-- 响应式布局：宽屏左侧固定清单栏，窄屏用 `☰` 折叠。
-- 右侧为行程正文（航班、酒店、时间轴、费用表）。
+- 响应式布局：宽屏左侧固定侧栏，窄屏用 `☰` 折叠。
+- **左侧栏双 Tab**：📋 预定清单 / 🎒 出行物品。
+- **主内容区双 Tab**：🗺️ 行程（航班、酒店、时间轴、费用表） / 💰 花销（4 人共享时间轴）。
 
-### 交互清单（左侧栏）
-| 功能 | 说明 |
-|------|------|
-| 勾选完成 | 点击方框切换完成状态，顶部进度条实时更新 |
-| 完成人 | 每项下方输入框，停顿 0.6s 后自动保存 |
-| 附件 | 📎 打开弹窗，可填写文字说明、上传图片凭证（上传前用 canvas 压缩到 ≤1000px） |
-| 图片放大 | 点击缩略图全屏查看 |
-| 🔄 刷新 | 手动从云端拉取最新；切回标签页 / 每 30s 也会自动同步 |
+### 交互功能
+| 区域 | 功能 | 说明 |
+|------|------|------|
+| 预定清单 | 勾选完成 | 点击方框切换状态，进度条实时更新 |
+| 预定清单 | 完成人 | 每项输入框，停顿 0.6s 自动保存 |
+| 预定清单 | 附件 | 📎 弹窗填文字说明、上传图片凭证（canvas 压缩到 ≤1000px），点缩略图全屏 |
+| 出行物品 | 勾选准备 | 按路线/季节整理的行李清单，仅勾选（无完成人） |
+| 花销 | 记一笔 | 每人「＋ 添加」→ 金额/说明/时间（默认当前，可用日期组件改） |
+| 花销 | 统一时间轴 | 4 人共享一条从最早到最晚的时间轴，按时间比例定位，横向对比先后 |
+| 花销 | 头像 | 人名前显示 `images/man.png` / `woman.png` |
+| 通用 | 🔄 刷新 | 手动云端同步；切回标签页 / 每 30s 自动同步 |
 
 ### 数据流
-1. 页面加载 → 先用 `localStorage` 缓存渲染 → 再 `GET /api/state` 拉云端覆盖。
-2. 任意改动 → 立即本地渲染 + `POST /api/state` 写云端（附图先 `POST /api/upload` 换成 URL）。
-3. 断网时自动回退到本地缓存，状态栏显示"离线"。
+1. 页面加载 → 先用 `localStorage` 缓存渲染 → 再 `GET /api/state` 拉云端覆盖；切到花销 Tab 时 `GET /api/expenses`。
+2. 清单改动 → 本地渲染 + `POST /api/state`（附图先 `POST /api/upload` 换成 URL）。
+3. 花销改动 → `POST /api/expenses` 新增 / `DELETE /api/expenses/{id}` 删除。
+4. 断网时自动回退到本地缓存，状态栏显示"离线"。
 
 ### 关键配置
 - 后端地址写在 [云南/旅游计划.html](云南/旅游计划.html) 脚本顶部：
   ```js
   const API_BASE = 'https://func-yntravel-ue8266.azurewebsites.net/api';
   ```
-- 清单条目在同一段脚本的 `GROUPS` 数组里定义（`id` 为唯一键，不要随意改动已有 id）。
+- 预定清单条目在 `GROUPS`、出行物品在 `PACKING`、花销人物在 `PEOPLE` 数组里定义（`id` 为唯一键，不要随意改动已有 id）。
 
 ### 修改与发布
 1. 编辑 `云南/旅游计划.html`。
@@ -78,7 +83,7 @@ Travel/
 
 ### 技术
 - **Azure Functions**（Node 22，v4 编程模型，Linux 消费计划）。
-- **Azure Table Storage** 存清单状态；**Azure Blob Storage** 存图片。
+- **Azure Table Storage** 存清单状态与花销；**Azure Blob Storage** 存图片。
 - 通过 **CORS** 只允许 GitHub Pages 域名调用。
 
 ### API
@@ -87,9 +92,13 @@ Travel/
 | GET | `/api/state` | 读取全部清单 | — | `{ items: { [id]: {done,who,note,img} } }` |
 | POST | `/api/state` | 写入/更新一项 | `{ id, done, who, note, img }` | `{ ok: true }` |
 | POST | `/api/upload` | 上传图片 | `{ id, dataUrl }` | `{ url }` |
+| GET | `/api/expenses` | 读取全部花销 | — | `{ items: [ {id,person,amount,note,time} ] }` |
+| POST | `/api/expenses` | 新增/更新一笔 | `{ id?, person, amount, note, time }` | `{ id }` |
+| DELETE | `/api/expenses/{id}` | 删除一笔 | — | `{ ok: true }` |
 
 ### 数据模型
 - Table `checklist`：`PartitionKey = "yn"`，`RowKey = 条目 id`，字段 `done/who/note/img`。
+- Table `expenses`：`PartitionKey = "yn"`，`RowKey = 花销 id`，字段 `person/amount/note/time`。
 - Blob 容器 `proofs`：公开只读，图片文件名 `{id}-{timestamp}.jpg`。
 
 ### 本地运行

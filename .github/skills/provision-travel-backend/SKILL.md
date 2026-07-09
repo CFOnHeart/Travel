@@ -36,7 +36,7 @@ Ask the user which mode if unclear. Default region: `eastasia`.
 - Runtime: **Node 22**, Functions **v4**, **Linux consumption** plan.
 - Storage: `Standard_LRS`, `--allow-blob-public-access true`.
 - App setting: `AzureWebJobsFeatureFlags=EnableWorkerIndexing`.
-- Table `checklist` and Blob container `proofs` are **auto-created by the code** on first use — no manual step.
+- Tables `checklist` and `expenses`, and Blob container `proofs`, are **auto-created by the code** on first use — no manual step.
 
 ## Procedure
 

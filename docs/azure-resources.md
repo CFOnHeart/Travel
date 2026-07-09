@@ -14,9 +14,10 @@
 | 1 | 资源组 | `Microsoft.Resources/resourceGroups` | `rg-yn-travel` | 位置 `eastasia` | 统一管理所有资源 |
 | 2 | 存储账户 | `Microsoft.Storage/storageAccounts` | `stynue8266` | `Standard_LRS`，启用公开 Blob 访问 | ① Functions 运行时存储 ② Table 存清单 ③ Blob 存图片 |
 | 3 | Table | `.../storageAccounts/tableServices/tables` | `checklist` | — | 清单状态（首次调用自动创建） |
-| 4 | Blob 容器 | `.../storageAccounts/blobServices/containers` | `proofs` | 公开只读（blob） | 图片凭证（首次上传自动创建） |
-| 5 | 函数应用 | `Microsoft.Web/sites` (kind `functionapp,linux`) | `func-yntravel-ue8266` | Linux · **消费计划** · Node 22 · Functions v4 | 承载 API |
-| 6 | 消费计划 | `Microsoft.Web/serverfarms` | 自动生成（`ASP-*`） | Dynamic (Y1) | Functions 的按量计费宿主 |
+| 4 | Table | `.../storageAccounts/tableServices/tables` | `expenses` | — | 花销记录（首次调用自动创建） |
+| 5 | Blob 容器 | `.../storageAccounts/blobServices/containers` | `proofs` | 公开只读（blob） | 图片凭证（首次上传自动创建） |
+| 6 | 函数应用 | `Microsoft.Web/sites` (kind `functionapp,linux`) | `func-yntravel-ue8266` | Linux · **消费计划** · Node 22 · Functions v4 | 承载 API |
+| 7 | 消费计划 | `Microsoft.Web/serverfarms` | 自动生成（`ASP-*`） | Dynamic (Y1) | Functions 的按量计费宿主 |
 
 > `ue8266` 是创建时生成的 6 位随机后缀，保证存储账户名与函数应用名全局唯一。
 > 在新环境部署会生成新的后缀（见 skill）。
