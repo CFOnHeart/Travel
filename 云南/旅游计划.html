@@ -339,7 +339,8 @@
   #expBoard { margin-top: 22px; overflow-x: auto; padding-bottom: 6px; }
   .exp-head-row, .exp-body { display: grid; grid-template-columns: 66px repeat(4, 1fr); gap: 10px; min-width: 580px; }
   .p-head { text-align: center; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px 6px; box-shadow: var(--shadow); }
-  .p-head .p-name { font-size: 1rem; font-weight: 800; color: var(--text); }
+  .p-head .p-name { font-size: 1rem; font-weight: 800; color: var(--text); display: inline-flex; align-items: center; gap: 6px; }
+  .p-head .p-name .p-icon { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; background: #f1f6f4; border: 1px solid var(--line); }
   .p-head .p-total { font-size: 1.05rem; font-weight: 800; color: var(--accent); margin: 2px 0 6px; }
   .p-head .p-total small { color: var(--muted); font-size: .68rem; font-weight: 500; }
   .add-exp { width: 100%; background: #eafaf4; color: var(--primary); border: 1px dashed #bfe6d8; border-radius: 9px; padding: 6px; font-size: .8rem; font-weight: 700; cursor: pointer; font-family: inherit; }
@@ -958,6 +959,7 @@
 
     // ============ 💰 花销登记 ============
     const PEOPLE = ['Wenwen', 'Kun', 'Yiming', 'Jun'];
+    const PERSON_ICON = { Wenwen: 'woman.png', Yiming: 'woman.png', Kun: 'man.png', Jun: 'man.png' };
     let expenses = [];
     let expLoaded = false;
 
@@ -1001,7 +1003,7 @@
       headRow.appendChild(document.createElement('div')); // 轴角占位
       PEOPLE.forEach(person => {
         const h = document.createElement('div'); h.className = 'p-head';
-        h.innerHTML = '<div class="p-name">' + esc(person) + '</div>' +
+        h.innerHTML = '<div class="p-name"><img class="p-icon" src="images/' + PERSON_ICON[person] + '" alt="">' + esc(person) + '</div>' +
           '<div class="p-total">¥' + fmtMoney(totals[person]) + ' <small>总花销</small></div>' +
           '<button class="add-exp" type="button">＋ 添加</button>';
         h.querySelector('.add-exp').addEventListener('click', () => openExpModal(person));
