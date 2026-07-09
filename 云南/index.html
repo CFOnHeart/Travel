@@ -336,41 +336,39 @@
     display: inline-block; margin-top: 10px; background: #fff3ea; color: #b5641f;
     border: 1px solid #ffddc4; border-radius: 999px; padding: 6px 18px; font-weight: 800;
   }
-  .exp-board { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 22px; }
-  .exp-col { background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 14px 12px 18px; display: flex; flex-direction: column; }
-  .exp-col .p-head { text-align: center; padding-bottom: 10px; border-bottom: 2px solid var(--line); margin-bottom: 12px; }
-  .exp-col .p-name { font-size: 1.05rem; font-weight: 800; color: var(--text); }
-  .exp-col .p-total { font-size: 1.15rem; font-weight: 800; color: var(--accent); margin-top: 2px; }
-  .exp-col .p-total small { color: var(--muted); font-size: .72rem; font-weight: 500; }
-  .add-exp {
-    width: 100%; margin-bottom: 14px; background: #eafaf4; color: var(--primary);
-    border: 1px dashed #bfe6d8; border-radius: 10px; padding: 8px; font-size: .85rem; font-weight: 700;
-    cursor: pointer; font-family: inherit;
-  }
+  #expBoard { margin-top: 22px; overflow-x: auto; padding-bottom: 6px; }
+  .exp-head-row, .exp-body { display: grid; grid-template-columns: 66px repeat(4, 1fr); gap: 10px; min-width: 580px; }
+  .p-head { text-align: center; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px 6px; box-shadow: var(--shadow); }
+  .p-head .p-name { font-size: 1rem; font-weight: 800; color: var(--text); }
+  .p-head .p-total { font-size: 1.05rem; font-weight: 800; color: var(--accent); margin: 2px 0 6px; }
+  .p-head .p-total small { color: var(--muted); font-size: .68rem; font-weight: 500; }
+  .add-exp { width: 100%; background: #eafaf4; color: var(--primary); border: 1px dashed #bfe6d8; border-radius: 9px; padding: 6px; font-size: .8rem; font-weight: 700; cursor: pointer; font-family: inherit; }
   .add-exp:hover { background: #dff4ec; }
-  .exp-timeline { position: relative; flex: 1; padding-left: 18px; }
-  .exp-timeline::before { content: ""; position: absolute; left: 5px; top: 4px; bottom: 4px; width: 2px; background: linear-gradient(var(--primary-light), var(--accent-2)); border-radius: 2px; }
-  .exp-empty { color: var(--muted); font-size: .82rem; text-align: center; padding: 12px 0; }
-  .exp-item { position: relative; margin-bottom: 14px; }
-  .exp-item::before { content: ""; position: absolute; left: -16px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: #fff; border: 3px solid var(--primary-light); }
-  .exp-item .e-time { font-size: .72rem; color: var(--muted); }
-  .exp-item .e-amt { font-size: 1.05rem; font-weight: 800; color: var(--accent); }
-  .exp-item .e-note { font-size: .84rem; color: #3a5850; word-break: break-word; }
-  .exp-item .e-del { position: absolute; right: 0; top: 2px; color: #c0561f; font-size: .78rem; cursor: pointer; opacity: 0; transition: opacity .15s; }
-  .exp-item:hover .e-del { opacity: 1; }
+
+  .exp-body { position: relative; margin-top: 12px; }
+  .exp-gridlines { position: absolute; left: 0; top: 0; right: 0; bottom: 0; pointer-events: none; z-index: 0; }
+  .exp-gridlines .gl { position: absolute; left: 72px; right: 0; height: 0; border-top: 1px dashed var(--line); }
+  .exp-axis { position: relative; }
+  .exp-axis::before { content: ""; position: absolute; right: 0; top: 0; bottom: 0; width: 2px; background: var(--line); border-radius: 2px; }
+  .exp-axis .tick { position: absolute; right: 8px; transform: translateY(-50%); font-size: .68rem; color: var(--muted); white-space: nowrap; text-align: right; line-height: 1.15; }
+  .exp-lane { position: relative; z-index: 1; }
+  .exp-lane::before { content: ""; position: absolute; left: 10px; top: 0; bottom: 0; width: 2px; background: linear-gradient(var(--primary-light), var(--accent-2)); border-radius: 2px; opacity: .45; }
+  .exp-dot-item { position: absolute; left: 0; right: 0; padding-left: 24px; }
+  .exp-dot-item .dot { position: absolute; left: 6px; top: 8px; width: 10px; height: 10px; border-radius: 50%; background: #fff; border: 3px solid var(--primary-light); z-index: 2; }
+  .exp-dot-item:hover { z-index: 5; }
+  .e-card { position: relative; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 5px 9px; box-shadow: 0 2px 8px rgba(14,122,95,.10); }
+  .e-card .e-amt { font-size: 1rem; font-weight: 800; color: var(--accent); }
+  .e-card .e-note { font-size: .8rem; color: #3a5850; word-break: break-word; line-height: 1.35; }
+  .e-card .e-time { font-size: .68rem; color: var(--muted); margin-top: 1px; }
+  .e-card .e-del { position: absolute; right: 5px; top: 4px; color: #c0561f; font-size: .74rem; cursor: pointer; opacity: 0; transition: opacity .15s; }
+  .e-card:hover .e-del { opacity: 1; }
+  .exp-empty { color: var(--muted); font-size: .88rem; text-align: center; padding: 24px 0; }
 
   .modal input[type=number], .modal input[type=datetime-local] {
     width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px;
     font-family: inherit; font-size: .95rem; color: var(--text); background: #fff;
   }
   .modal input[type=datetime-local] { color-scheme: light; }
-
-  @media (max-width: 720px) {
-    .exp-board { grid-template-columns: repeat(2, 1fr); }
-  }
-  @media (max-width: 420px) {
-    .exp-board { grid-template-columns: 1fr; }
-  }
 </style>
 </head>
 <body>
@@ -983,42 +981,83 @@
       } catch (e) { renderBoard(); }
     }
 
+    function fmtMoney(n) { return (Number(n) || 0).toFixed(2).replace(/\.00$/, ''); }
+    function fmtTick(t) {
+      const d = new Date(t); if (isNaN(d)) return '';
+      return (d.getMonth() + 1) + '/' + d.getDate() + '<br>' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    }
+
     function renderBoard() {
       const board = document.getElementById('expBoard');
       board.innerHTML = '';
-      let grand = 0;
+      const all = expenses.slice();
+      const grand = all.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+      document.getElementById('expGrand').textContent = '总花销 ¥' + fmtMoney(grand);
+
+      // 头部行：轴角 + 4 人（姓名 / 总额 / 添加）
+      const totals = {};
+      PEOPLE.forEach(p => { totals[p] = all.filter(e => e.person === p).reduce((s, e) => s + (Number(e.amount) || 0), 0); });
+      const headRow = document.createElement('div'); headRow.className = 'exp-head-row';
+      headRow.appendChild(document.createElement('div')); // 轴角占位
       PEOPLE.forEach(person => {
-        const list = expenses.filter(e => e.person === person)
-          .sort((a, b) => new Date(a.time) - new Date(b.time));
-        const total = list.reduce((s, e) => s + (Number(e.amount) || 0), 0);
-        grand += total;
-        const col = document.createElement('div'); col.className = 'exp-col';
-        let html =
-          '<div class="p-head"><div class="p-name">' + esc(person) + '</div>' +
-          '<div class="p-total">¥' + total.toFixed(2).replace(/\.00$/, '') + ' <small>总花销</small></div></div>' +
-          '<button class="add-exp" type="button" data-person="' + person + '">＋ 添加花销</button>' +
-          '<div class="exp-timeline">';
-        if (list.length === 0) {
-          html += '<div class="exp-empty">还没有记录</div>';
-        } else {
-          list.forEach(e => {
-            html += '<div class="exp-item" data-id="' + esc(e.id) + '">' +
-              '<span class="e-del" title="删除">✕</span>' +
-              '<div class="e-time">🕒 ' + esc(fmtTime(e.time)) + '</div>' +
-              '<div class="e-amt">¥' + (Number(e.amount) || 0).toFixed(2).replace(/\.00$/, '') + '</div>' +
-              (e.note ? '<div class="e-note">' + esc(e.note) + '</div>' : '') +
-              '</div>';
-          });
-        }
-        html += '</div>';
-        col.innerHTML = html;
-        col.querySelector('.add-exp').addEventListener('click', () => openExpModal(person));
-        col.querySelectorAll('.exp-item').forEach(it => {
-          it.querySelector('.e-del').addEventListener('click', () => deleteExpense(it.dataset.id));
-        });
-        board.appendChild(col);
+        const h = document.createElement('div'); h.className = 'p-head';
+        h.innerHTML = '<div class="p-name">' + esc(person) + '</div>' +
+          '<div class="p-total">¥' + fmtMoney(totals[person]) + ' <small>总花销</small></div>' +
+          '<button class="add-exp" type="button">＋ 添加</button>';
+        h.querySelector('.add-exp').addEventListener('click', () => openExpModal(person));
+        headRow.appendChild(h);
       });
-      document.getElementById('expGrand').textContent = '总花销 ¥' + grand.toFixed(2).replace(/\.00$/, '');
+      board.appendChild(headRow);
+
+      if (all.length === 0) {
+        const empty = document.createElement('div'); empty.className = 'exp-empty';
+        empty.textContent = '还没有花销记录，点击某人的「＋ 添加」记一笔。';
+        board.appendChild(empty);
+        return;
+      }
+
+      // 统一时间轴范围：最早 → 最晚
+      const times = all.map(e => new Date(e.time).getTime()).filter(t => !isNaN(t));
+      let min = Math.min(...times), max = Math.max(...times);
+      if (!(max > min)) { max = min + 3600000; } // 只有一笔或同一时间，给 1 小时跨度避免除零
+      const H = 560, top0 = 10, usable = H - 60;
+      const posOf = t => top0 + ((t - min) / (max - min)) * usable;
+
+      const body = document.createElement('div'); body.className = 'exp-body'; body.style.height = H + 'px';
+
+      // 横向刻度线 + 左侧时间刻度
+      const gl = document.createElement('div'); gl.className = 'exp-gridlines';
+      const axis = document.createElement('div'); axis.className = 'exp-axis';
+      const N = 6;
+      for (let i = 0; i < N; i++) {
+        const t = min + (max - min) * i / (N - 1);
+        const y = posOf(t);
+        const line = document.createElement('div'); line.className = 'gl'; line.style.top = y + 'px'; gl.appendChild(line);
+        const lab = document.createElement('div'); lab.className = 'tick'; lab.style.top = y + 'px'; lab.innerHTML = fmtTick(t); axis.appendChild(lab);
+      }
+      body.appendChild(gl);
+      body.appendChild(axis);
+
+      // 每人一条泳道，按时间比例定位
+      PEOPLE.forEach(person => {
+        const lane = document.createElement('div'); lane.className = 'exp-lane';
+        all.filter(e => e.person === person)
+          .sort((a, b) => new Date(a.time) - new Date(b.time))
+          .forEach(e => {
+            const t = new Date(e.time).getTime(); if (isNaN(t)) return;
+            const item = document.createElement('div'); item.className = 'exp-dot-item'; item.style.top = posOf(t) + 'px';
+            item.innerHTML = '<span class="dot"></span>' +
+              '<div class="e-card"><span class="e-del" title="删除">✕</span>' +
+              '<div class="e-amt">¥' + fmtMoney(e.amount) + '</div>' +
+              (e.note ? '<div class="e-note">' + esc(e.note) + '</div>' : '') +
+              '<div class="e-time">🕒 ' + esc(fmtTime(e.time)) + '</div></div>';
+            item.querySelector('.e-del').addEventListener('click', () => deleteExpense(e.id));
+            lane.appendChild(item);
+          });
+        body.appendChild(lane);
+      });
+
+      board.appendChild(body);
     }
 
     // ---- 花销弹窗 ----
