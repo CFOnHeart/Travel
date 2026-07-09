@@ -136,7 +136,8 @@ az resource list -g rg-yn-travel -o table
 
 ### 文档同步 Hook
 `Stop` 生命周期钩子 [.github/hooks/docs-sync-check.json](.github/hooks/docs-sync-check.json)（脚本 [check-docs-sync.ps1](.github/hooks/check-docs-sync.ps1)）在**每次 AI 回答结束后**运行：
-若检测到 `api/`、前端页面或 skill 脚本有未提交改动、但 `README.md` / `docs/` / `SKILL.md` 未同步，会注入提醒，促使及时更新文档与 skill。无相关改动时静默。
+若检测到 `api/`、前端页面或 skill 脚本有未提交改动、但 `README.md` / `docs/` / `SKILL.md` 未同步，会注入提醒，
+指示助手**先询问用户是否需要更新相关文档，并在用户明确确认前不自动修改**；用户确认后才执行更新。无相关改动时静默。
 
 ---
 

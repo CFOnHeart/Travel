@@ -44,8 +44,10 @@ foreach ($p in $paths) {
 if ($codeChanged -and -not $docChanged) {
   $list = ($hits | Select-Object -Unique -First 6) -join ', '
   $msg = "📌 文档同步检查：检测到代码/后端改动（$list）但未更新文档或 skill。" +
-         "请判断是否需要同步更新：README.md、docs/azure-resources.md、.github/skills/*/SKILL.md。" +
-         "若本次改动不影响文档，可忽略本提醒。"
+         "【行动要求】请在本轮结束前，明确询问用户是否需要同步更新相关文档" +
+         "（README.md、docs/azure-resources.md、.github/skills/*/SKILL.md），" +
+         "列出可能受影响的文件，并在用户明确回复『需要/不需要』之前，不要自动修改任何文档或 skill。" +
+         "若用户确认需要，再执行更新；若用户表示不需要或本次改动不影响文档，则跳过。"
   $out = [ordered]@{ continue = $true; systemMessage = $msg }
   Write-Output ($out | ConvertTo-Json -Compress)
 }
