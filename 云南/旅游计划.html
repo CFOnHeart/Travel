@@ -738,21 +738,27 @@
       const st = itemState(item);
       const row = document.createElement('div');
       row.className = 'todo ' + (st.done ? 'done' : 'pending') + ((st.img || st.note) ? ' has-attach' : '');
+      const showWho = opts.who !== false;
+      const controls = showWho || opts.attach
+        ? '<div class="t-row2">' +
+            (showWho ? '<input class="who-input" placeholder="' + (opts.whoPlaceholder || '完成人…') + '" value="' + esc(st.who) + '">' : '') +
+            (opts.attach ? '<button class="attach-btn" type="button">📎 附件<span class="dot"></span></button>' : '') +
+          '</div>'
+        : '';
       row.innerHTML =
         '<span class="box">' + (st.done ? '✓' : '') + '</span>' +
         '<div class="t-main"><div class="t-name">' + esc(item.name) + '</div>' +
         (item.meta ? '<div class="t-meta">' + esc(item.meta) + '</div>' : '') + '</div>' +
-        '<div class="t-row2">' +
-          '<input class="who-input" placeholder="' + (opts.whoPlaceholder || '完成人…') + '" value="' + esc(st.who) + '">' +
-          (opts.attach ? '<button class="attach-btn" type="button">📎 附件<span class="dot"></span></button>' : '') +
-        '</div>';
+        controls;
       row.querySelector('.box').addEventListener('click', () => { st.done = !st.done; render(); pushItem(item.id); });
-      const whoIn = row.querySelector('.who-input');
-      whoIn.addEventListener('input', () => {
-        st.who = whoIn.value; cacheLocal();
-        clearTimeout(whoTimers[item.id]);
-        whoTimers[item.id] = setTimeout(() => pushItem(item.id), 600);
-      });
+      if (showWho) {
+        const whoIn = row.querySelector('.who-input');
+        whoIn.addEventListener('input', () => {
+          st.who = whoIn.value; cacheLocal();
+          clearTimeout(whoTimers[item.id]);
+          whoTimers[item.id] = setTimeout(() => pushItem(item.id), 600);
+        });
+      }
       if (opts.attach) row.querySelector('.attach-btn').addEventListener('click', () => openModal(item, st));
       return row;
     }
@@ -773,7 +779,7 @@
     }
     function render() {
       renderList(document.getElementById('todoContainer'), GROUPS, 'progressFill', 'progressLabel', '已完成', { attach: true, whoPlaceholder: '完成人…' });
-      renderList(document.getElementById('packingContainer'), PACKING, 'packFill', 'packLabel', '已准备', { attach: false, whoPlaceholder: '谁带…' });
+      renderList(document.getElementById('packingContainer'), PACKING, 'packFill', 'packLabel', '已准备', { attach: false, who: false });
     }
 
     // ---- 弹窗 ----
