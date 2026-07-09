@@ -47,6 +47,18 @@
     display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
   }
   .sidebar .sub { font-size: .8rem; color: #8fbfb0; margin-bottom: 18px; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 6px; margin: 4px 0 14px; }
+  .tab-btn {
+    flex: 1; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12);
+    color: #b9d8cd; border-radius: 10px; padding: 8px 6px; font-size: .84rem; font-weight: 700;
+    cursor: pointer; font-family: inherit; transition: all .15s;
+  }
+  .tab-btn:hover { background: rgba(255,255,255,.12); }
+  .tab-btn.active { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; border-color: transparent; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
   .progress-wrap { margin-bottom: 22px; }
   .progress-bar { height: 8px; background: rgba(255,255,255,.12); border-radius: 999px; overflow: hidden; }
   .progress-bar > span { display: block; height: 100%; width: 30%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
@@ -304,23 +316,40 @@
   <button class="menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</button>
   <div class="layout">
 
-    <!-- ===== 侧边栏：预定完成事项 ===== -->
+    <!-- ===== 侧边栏：多 Tab ===== -->
     <aside class="sidebar">
-      <h2>📋 预定清单</h2>
-      <div class="sub">交通 · 租车 · 门票 · 住宿</div>
-
-      <div class="progress-wrap">
-        <div class="progress-bar"><span id="progressFill" style="width:0%"></span></div>
-        <div class="progress-label" id="progressLabel">已完成 0 / 0 项</div>
+      <h2>🧭 云南之旅</h2>
+      <div class="tabs">
+        <button class="tab-btn active" type="button" data-tab="booking">📋 预定清单</button>
+        <button class="tab-btn" type="button" data-tab="packing">🎒 出行物品</button>
       </div>
 
-      <div id="todoContainer"></div>
+      <!-- Tab 1：预定清单 -->
+      <div class="tab-panel active" id="panel-booking">
+        <div class="sub">交通 · 租车 · 门票 · 住宿</div>
+        <div class="progress-wrap">
+          <div class="progress-bar"><span id="progressFill" style="width:0%"></span></div>
+          <div class="progress-label" id="progressLabel">已完成 0 / 0 项</div>
+        </div>
+        <div id="todoContainer"></div>
+      </div>
+
+      <!-- Tab 2：出行物品 -->
+      <div class="tab-panel" id="panel-packing">
+        <div class="sub">按路线 · 季节整理的行李清单</div>
+        <div class="progress-wrap">
+          <div class="progress-bar"><span id="packFill" style="width:0%"></span></div>
+          <div class="progress-label" id="packLabel">已准备 0 / 0 项</div>
+        </div>
+        <div id="packingContainer"></div>
+        <div class="sidebar-note" style="margin-top:8px;">🧠 已结合西双版纳（热带·雨季）、丽江/玉龙雪山/泸沽湖（高原·温差大·强紫外线）与自驾行程补充建议物品。</div>
+      </div>
 
       <div class="sidebar-actions">
         <button class="mini-btn" id="refreshBtn" title="从云端同步最新状态">🔄 刷新</button>
         <span class="sync-status" id="syncStatus"></span>
       </div>
-      <div class="sidebar-note">☁️ 勾选、完成人与附件会实时同步到云端，同伴刷新即可看到。</div>
+      <div class="sidebar-note">☁️ 勾选会实时同步到云端，同伴刷新即可看到。</div>
     </aside>
 
     <!-- ===== 主内容 ===== -->
@@ -585,6 +614,54 @@
       ]},
     ];
 
+    // 🎒 出行物品清单（结合路线与 7 月季节整理；meta 为说明/建议来源）
+    const PACKING = [
+      { title: '🪪 证件 & 财物', items: [
+        { id: 'pk-id',      name: '身份证',            meta: '登机 / 酒店入住 / 取车必备', done: false, who: '' },
+        { id: 'pk-license', name: '驾驶证',            meta: '自驾取小鹏 G7 必带',         done: false, who: '' },
+        { id: 'pk-phone',   name: '手机',              meta: '',                          done: false, who: '' },
+        { id: 'pk-cash',    name: '现金 / 银行卡',      meta: '部分景区/小店备用',          done: false, who: '' },
+        { id: 'pk-orders',  name: '机票·酒店订单截图',  meta: '离线也能查',                 done: false, who: '' },
+      ]},
+      { title: '🔌 电子设备', items: [
+        { id: 'pk-cable',    name: '充电线',           meta: '手机 / 平板',               done: false, who: '' },
+        { id: 'pk-powerbank',name: '充电宝',           meta: '登机 ≤100Wh，随身',         done: false, who: '' },
+        { id: 'pk-tablet',   name: '平板电脑',         meta: '',                          done: false, who: '' },
+        { id: 'pk-charger',  name: '多口充电头',       meta: '一拖多更省插座',             done: false, who: '' },
+        { id: 'pk-earphone', name: '耳机',             meta: '',                          done: false, who: '' },
+        { id: 'pk-carmount', name: '车载手机支架',      meta: '自驾导航用',                 done: false, who: '' },
+      ]},
+      { title: '👕 衣物', items: [
+        { id: 'pk-tee',      name: '透气短袖 / 短裤',   meta: '西双版纳炎热',               done: false, who: '' },
+        { id: 'pk-jacket',   name: '薄外套 / 薄羽绒',   meta: '丽江·泸沽湖高原昼夜温差大',   done: false, who: '' },
+        { id: 'pk-swim',     name: '泳衣 / 泳镜',       meta: '酒店泳池',                   done: false, who: '' },
+        { id: 'pk-underwear',name: '换洗内衣 / 袜',     meta: '',                          done: false, who: '' },
+        { id: 'pk-shoes',    name: '舒适步行鞋',        meta: '古镇/雪山下多走路',          done: false, who: '' },
+        { id: 'pk-slippers', name: '拖鞋',             meta: '',                          done: false, who: '' },
+        { id: 'pk-hat',      name: '遮阳帽',           meta: '高原紫外线强',               done: false, who: '' },
+        { id: 'pk-rain',     name: '折叠伞 / 雨衣',     meta: '7 月雨季，常备',             done: false, who: '' },
+      ]},
+      { title: '🧴 洗漱 & 护肤', items: [
+        { id: 'pk-wash',      name: '洗漱用品',         meta: '牙刷牙膏/毛巾等',            done: false, who: '' },
+        { id: 'pk-sunscreen', name: '防晒霜 SPF50',    meta: '高原紫外线强，务必高倍',      done: false, who: '' },
+        { id: 'pk-sunglass',  name: '墨镜',            meta: '雪山/湖面反光',              done: false, who: '' },
+        { id: 'pk-lipbalm',   name: '润唇膏 / 保湿霜',  meta: '高原干燥',                   done: false, who: '' },
+        { id: 'pk-repellent', name: '驱蚊液',          meta: '西双版纳热带雨林蚊虫多',      done: false, who: '' },
+      ]},
+      { title: '💊 药品 & 健康', items: [
+        { id: 'pk-altitude', name: '抗高反药（红景天等）', meta: '玉龙雪山/泸沽湖高海拔',    done: false, who: '' },
+        { id: 'pk-cold',     name: '感冒 / 肠胃药',       meta: '',                        done: false, who: '' },
+        { id: 'pk-motion',   name: '晕车药',             meta: '山路自驾/盘山路',          done: false, who: '' },
+        { id: 'pk-firstaid', name: '创可贴 / 常用药',     meta: '',                        done: false, who: '' },
+      ]},
+      { title: '🎒 其他', items: [
+        { id: 'pk-backpack', name: '双肩包 / 小挎包',    meta: '一日游随身',               done: false, who: '' },
+        { id: 'pk-bottle',   name: '保温杯',            meta: '高原多补水',               done: false, who: '' },
+        { id: 'pk-wipes',    name: '湿巾 / 纸巾',        meta: '',                        done: false, who: '' },
+        { id: 'pk-drybag',   name: '防水袋 / 收纳袋',    meta: '雨季/泸沽湖船上护手机',     done: false, who: '' },
+      ]},
+    ];
+
     let state = {};
     try { state = JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch (e) { state = {}; }
 
@@ -610,8 +687,8 @@
         if (!r.ok) throw new Error('HTTP ' + r.status);
         const data = await r.json();
         const items = (data && data.items) || {};
-        // 服务端数据覆盖到本地默认
-        GROUPS.forEach(g => g.items.forEach(item => {
+        // 服务端数据覆盖到本地默认（预定清单 + 出行物品）
+        GROUPS.concat(PACKING).forEach(g => g.items.forEach(item => {
           const s = itemState(item);
           if (items[item.id]) {
             s.done = !!items[item.id].done;
@@ -656,42 +733,47 @@
       return d.url;
     }
 
-    const container = document.getElementById('todoContainer');
     const whoTimers = {};
-    function render() {
+    function makeRow(item, opts) {
+      const st = itemState(item);
+      const row = document.createElement('div');
+      row.className = 'todo ' + (st.done ? 'done' : 'pending') + ((st.img || st.note) ? ' has-attach' : '');
+      row.innerHTML =
+        '<span class="box">' + (st.done ? '✓' : '') + '</span>' +
+        '<div class="t-main"><div class="t-name">' + esc(item.name) + '</div>' +
+        (item.meta ? '<div class="t-meta">' + esc(item.meta) + '</div>' : '') + '</div>' +
+        '<div class="t-row2">' +
+          '<input class="who-input" placeholder="' + (opts.whoPlaceholder || '完成人…') + '" value="' + esc(st.who) + '">' +
+          (opts.attach ? '<button class="attach-btn" type="button">📎 附件<span class="dot"></span></button>' : '') +
+        '</div>';
+      row.querySelector('.box').addEventListener('click', () => { st.done = !st.done; render(); pushItem(item.id); });
+      const whoIn = row.querySelector('.who-input');
+      whoIn.addEventListener('input', () => {
+        st.who = whoIn.value; cacheLocal();
+        clearTimeout(whoTimers[item.id]);
+        whoTimers[item.id] = setTimeout(() => pushItem(item.id), 600);
+      });
+      if (opts.attach) row.querySelector('.attach-btn').addEventListener('click', () => openModal(item, st));
+      return row;
+    }
+    function renderList(container, groups, fillId, labelId, doneWord, opts) {
       container.innerHTML = '';
       let total = 0, done = 0;
-      GROUPS.forEach(g => {
+      groups.forEach(g => {
         const gEl = document.createElement('div'); gEl.className = 'todo-group';
         const t = document.createElement('div'); t.className = 'g-title'; t.textContent = g.title; gEl.appendChild(t);
         g.items.forEach(item => {
-          total++;
-          const st = itemState(item);
-          if (st.done) done++;
-          const row = document.createElement('div');
-          row.className = 'todo ' + (st.done ? 'done' : 'pending') + ((st.img || st.note) ? ' has-attach' : '');
-          row.innerHTML =
-            '<span class="box">' + (st.done ? '✓' : '') + '</span>' +
-            '<div class="t-main"><div class="t-name">' + esc(item.name) + '</div>' +
-            '<div class="t-meta">' + esc(item.meta) + '</div></div>' +
-            '<div class="t-row2">' +
-              '<input class="who-input" placeholder="完成人…" value="' + esc(st.who) + '">' +
-              '<button class="attach-btn" type="button">📎 附件<span class="dot"></span></button>' +
-            '</div>';
-          row.querySelector('.box').addEventListener('click', () => { st.done = !st.done; render(); pushItem(item.id); });
-          const whoIn = row.querySelector('.who-input');
-          whoIn.addEventListener('input', () => {
-            st.who = whoIn.value; cacheLocal();
-            clearTimeout(whoTimers[item.id]);
-            whoTimers[item.id] = setTimeout(() => pushItem(item.id), 600);
-          });
-          row.querySelector('.attach-btn').addEventListener('click', () => openModal(item, st));
-          gEl.appendChild(row);
+          total++; const st = itemState(item); if (st.done) done++;
+          gEl.appendChild(makeRow(item, opts));
         });
         container.appendChild(gEl);
       });
-      document.getElementById('progressFill').style.width = (total ? Math.round(done / total * 100) : 0) + '%';
-      document.getElementById('progressLabel').textContent = '已完成 ' + done + ' / ' + total + ' 项';
+      document.getElementById(fillId).style.width = (total ? Math.round(done / total * 100) : 0) + '%';
+      document.getElementById(labelId).textContent = doneWord + ' ' + done + ' / ' + total + ' 项';
+    }
+    function render() {
+      renderList(document.getElementById('todoContainer'), GROUPS, 'progressFill', 'progressLabel', '已完成', { attach: true, whoPlaceholder: '完成人…' });
+      renderList(document.getElementById('packingContainer'), PACKING, 'packFill', 'packLabel', '已准备', { attach: false, whoPlaceholder: '谁带…' });
     }
 
     // ---- 弹窗 ----
@@ -762,6 +844,16 @@
 
     // 刷新（从云端同步）
     document.getElementById('refreshBtn').addEventListener('click', loadFromServer);
+
+    // Tab 切换
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+        const tab = btn.dataset.tab;
+        document.getElementById('panel-booking').classList.toggle('active', tab === 'booking');
+        document.getElementById('panel-packing').classList.toggle('active', tab === 'packing');
+      });
+    });
 
     // 自动同步：切回页面时刷新 + 每 30 秒轮询（弹窗打开时不打扰）
     window.addEventListener('focus', () => { if (!mask.classList.contains('open')) loadFromServer(); });
