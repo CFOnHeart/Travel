@@ -1,0 +1,12 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "type": "command",
+        "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./.github/hooks/check-docs-sync.ps1",
+        "windows": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./.github/hooks/check-docs-sync.ps1",
+        "timeout": 20
+      }
+    ]
+  }
+}

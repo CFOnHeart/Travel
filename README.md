@@ -134,6 +134,10 @@ az resource list -g rg-yn-travel -o table
 | [`/deploy-travel-app`](.github/skills/deploy-travel-app/SKILL.md) | 一键部署最新前端（GitHub Pages）+ 后端（Function App） |
 | [`/provision-travel-backend`](.github/skills/provision-travel-backend/SKILL.md) | 在**新环境**创建全部 Azure 资源，或在**旧环境**更新配置并重新部署 |
 
+### 文档同步 Hook
+`Stop` 生命周期钩子 [.github/hooks/docs-sync-check.json](.github/hooks/docs-sync-check.json)（脚本 [check-docs-sync.ps1](.github/hooks/check-docs-sync.ps1)）在**每次 AI 回答结束后**运行：
+若检测到 `api/`、前端页面或 skill 脚本有未提交改动、但 `README.md` / `docs/` / `SKILL.md` 未同步，会注入提醒，促使及时更新文档与 skill。无相关改动时静默。
+
 ---
 
 ## 成本
