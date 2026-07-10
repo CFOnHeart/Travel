@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>行程生成 · 把你的行程变成一页精美记录</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="home-wrap">
+    <div class="home-hero">
+      <div class="logo">🧭</div>
+      <h1>行程生成</h1>
+      <p>粘贴你的行程描述，自动生成一页精美、可分享、可勾选的旅行记录。</p>
+    </div>
+
+    <div class="gen-card">
+      <label for="tripText">✍️ 描述你的行程</label>
+      <textarea id="tripText" placeholder="例如：&#10;1. 去程航班 7/17 周五 19:15 上海浦东出发 KY3122，含行李托运，约 ¥800/人&#10;2. 住宿 7/17-7/21 四晚 温德姆至尊酒店 豪华大床房，¥475/晚，人均约 950&#10;3. 7/21 早 7:55 DR5051 飞丽江，含机建燃油 ¥340/人（行李托运仅 10kg）&#10;4. 机场租车 小鹏G7 ¥250/天 租四天，含保险，人均约 450&#10;..."></textarea>
+      <div class="gen-actions">
+        <button class="gen-btn" id="genBtn" type="button">✨ 生成行程页</button>
+        <button class="gen-example" id="exampleBtn" type="button">填入示例</button>
+        <span class="gen-hint">仅支持中文 · 生成后可手动编辑</span>
+      </div>
+      <div class="gen-status" id="genStatus"></div>
+    </div>
+
+    <div class="recent">
+      <h3>🕘 最近的行程</h3>
+      <div class="recent-list" id="recentList"><p class="recent-empty">还没有生成过行程。</p></div>
+    </div>
+  </div>
+
+  <!-- 生成加载态 -->
+  <div class="gen-overlay" id="genOverlay">
+    <div class="spinner"></div>
+    <div class="ov-text">正在解析你的行程…</div>
+    <div class="ov-sub">AI 正在提取航班、住宿、行程与清单，大约需要 10–30 秒</div>
+  </div>
+
+  <script type="module" src="js/home.js"></script>
+</body>
+</html>

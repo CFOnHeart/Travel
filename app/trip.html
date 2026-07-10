@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>我的行程</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="content" id="tripRoot">
+    <!-- Hero 由 JS 渲染 -->
+    <div id="heroSlot"></div>
+
+    <div class="trip-toolbar">
+      <button class="tool-btn" id="shareBtn" type="button">🔗 复制分享链接</button>
+      <button class="tool-btn" id="editBtn" type="button">✏️ 编辑</button>
+      <a class="tool-btn" href="index.html">＋ 新行程</a>
+    </div>
+
+    <nav class="main-tabs">
+      <button class="main-tab active" type="button" data-mtab="trip">🗺️ 行程</button>
+      <button class="main-tab" type="button" data-mtab="booking">📋 预定清单</button>
+      <button class="main-tab" type="button" data-mtab="packing">🎒 出行物品</button>
+    </nav>
+
+    <main class="wrap main-panel active" id="mpanel-trip"></main>
+    <section class="wrap main-panel" id="mpanel-booking"></section>
+    <section class="wrap main-panel" id="mpanel-packing"></section>
+
+    <footer>🌿 由行程生成平台创建 · 具体价格与航班请以实时预订为准</footer>
+  </div>
+
+  <!-- 加载态 -->
+  <div class="gen-overlay" id="loadOverlay">
+    <div class="spinner"></div>
+    <div class="ov-text" id="loadText">加载行程中…</div>
+  </div>
+
+  <!-- 编辑抽屉 -->
+  <div class="editor-mask" id="editorMask"></div>
+  <aside class="editor" id="editor">
+    <div class="editor-head">
+      <h3>✏️ 编辑行程</h3>
+      <button class="editor-close" id="editorClose" type="button">×</button>
+    </div>
+    <div class="editor-body" id="editorBody"></div>
+    <div class="editor-foot">
+      <button class="btn ghost" id="editorCancel" type="button" style="flex:1;border:1px solid var(--line);background:#eef3f1;color:#3a5850;border-radius:10px;padding:10px;font-weight:700;cursor:pointer;">取消</button>
+      <button class="btn primary" id="editorSave" type="button" style="flex:1;background:var(--primary);color:#fff;border:none;border-radius:10px;padding:10px;font-weight:700;cursor:pointer;">保存</button>
+    </div>
+  </aside>
+
+  <script type="module" src="js/trip.js"></script>
+</body>
+</html>
