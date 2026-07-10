@@ -2,7 +2,7 @@
 import { getTrip, saveTrip } from './api.js';
 import { RECENT_KEY } from './config.js';
 import {
-  renderHero, renderSections, renderChecklistPanel, renderPackingPanel, renderExpensePanel
+  renderHero, renderSections, renderChecklistPanel, renderPackingPanel, esc
 } from './render.js';
 import { initEditor, setEditorData } from './editor.js';
 
@@ -35,8 +35,183 @@ function renderAll() {
 }
 
 function renderExpense() {
-  $('#mpanel-expense').innerHTML = renderExpensePanel(trip);
-  wireExpense();
+  const people = trip.people = trip.people || [];
+  const expenses = trip.expenses = trip.expenses || [];
+  const grand = expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+  $('#mpanel-expense').innerHTML = `
+    <div class="exp-head">
+      <h2>💰 花销统计</h2>
+      <p class="sub">纵轴是时间轴，看得到每笔花销的时间走势</p>
+      <div class="exp-grand">总花销 ¥${fmtMoney(grand)}</div>
+    </div>
+    <div class="exp-hint">💡 先「＋ 添加人员」，再为每人「＋ 添加」记一笔。纵轴为时间轴，可查看花钱的时间走势；把鼠标移到看板上还能看到该时刻的<b>累计花销</b>；每列顶部显示每人的<b>总花销</b>。</div>
+    <div class="exp-toolbar"><button class="tool-btn primary" id="addPersonBtn" type="button">＋ 添加人员</button></div>
+    <div id="expBoard"></div>`;
+
+  $('#addPersonBtn').addEventListener('click', addPerson);
+
+  if (!people.length) {
+    $('#expBoard').innerHTML = `
+      <div class="exp-empty-big"><div class="ee-icon">🧑‍🤝‍🧑</div>
+      <p class="ee-title">还没有添加同行人员</p>
+      <p class="ee-sub">点击上方「＋ 添加人员」，添加后即可为每个人记录花销，并在时间轴上查看走势与累计。</p></div>`;
+    return;
+  }
+  buildBoard(people, expenses);
+}
+
+function addPerson() {
+  trip.people = trip.people || [];
+  trip.people.push({ id: genId(), name: '同行人' + (trip.people.length + 1) });
+  renderExpense();
+  queueSave();
+  const inputs = $$('#expBoard .person-name');
+  if (inputs.length) { const last = inputs[inputs.length - 1]; last.focus(); last.select(); }
+}
+
+// ---- 时间轴看板（动态人员，纵轴=时间，每人一列泳道）----
+const AXIS = { height: 560, top: 10, ticks: 6 };
+function fmtMoney(n) { return (Math.round((Number(n) || 0) * 100) / 100).toString(); }
+function fmtTime(t) { const d = new Date(t); if (isNaN(d)) return ''; const p = n => String(n).padStart(2, '0'); return `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; }
+function fmtTick(t) { const d = new Date(t); const p = n => String(n).padStart(2, '0'); return `${p(d.getMonth() + 1)}-${p(d.getDate())}<br>${p(d.getHours())}:${p(d.getMinutes())}`; }
+
+function buildBoard(people, expenses) {
+  const board = $('#expBoard');
+  board.innerHTML = '';
+  const cols = `66px repeat(${people.length}, minmax(140px, 1fr))`;
+
+  const totals = {};
+  people.forEach(p => { totals[p.id] = expenses.filter(e => e.personId === p.id).reduce((s, e) => s + (Number(e.amount) || 0), 0); });
+
+  // 头部行：轴角占位 + 每人一列（姓名/总额/添加/删除）
+  const headRow = document.createElement('div');
+  headRow.className = 'exp-head-row';
+  headRow.style.gridTemplateColumns = cols;
+  headRow.appendChild(document.createElement('div'));
+  people.forEach(p => {
+    const head = document.createElement('div');
+    head.className = 'p-head';
+    head.innerHTML =
+      `<div class="p-name"><input class="person-name" placeholder="姓名"></div>` +
+      `<div class="p-total">¥${fmtMoney(totals[p.id])} <small>总花销</small></div>` +
+      `<div style="display:flex;gap:6px;">` +
+      `<button class="add-exp" type="button" style="flex:1;">＋ 添加</button>` +
+      `<button class="person-del" type="button" title="删除人员" style="background:none;border:1px solid var(--line);border-radius:9px;cursor:pointer;padding:0 8px;">🗑️</button>` +
+      `</div>`;
+    const nameInput = head.querySelector('.person-name');
+    nameInput.value = p.name || '';
+    nameInput.addEventListener('input', () => { p.name = nameInput.value; queueSave(); });
+    head.querySelector('.add-exp').addEventListener('click', () => { expModalPerson = p.id; openExpModal(); });
+    head.querySelector('.person-del').addEventListener('click', () => {
+      if (!confirm('删除该人员及其所有花销记录？')) return;
+      trip.people = trip.people.filter(x => x.id !== p.id);
+      trip.expenses = (trip.expenses || []).filter(e => e.personId !== p.id);
+      renderExpense();
+      queueSave();
+    });
+    headRow.appendChild(head);
+  });
+  board.appendChild(headRow);
+
+  if (expenses.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'exp-empty';
+    empty.textContent = '还没有花销记录，点击某人的「＋ 添加」记一笔。';
+    board.appendChild(empty);
+    return;
+  }
+
+  // 统一时间轴范围
+  const times = expenses.map(e => new Date(e.time).getTime()).filter(t => !isNaN(t));
+  const min = Math.min(...times);
+  let max = Math.max(...times);
+  if (!(max > min)) max = min + 3600000;
+
+  const H = AXIS.height, top0 = AXIS.top, N = AXIS.ticks;
+  const usable = H - 60;
+  const posOf = t => top0 + ((t - min) / (max - min)) * usable;
+
+  const body = document.createElement('div');
+  body.className = 'exp-body';
+  body.style.gridTemplateColumns = cols;
+  body.style.height = H + 'px';
+
+  // 横向刻度线 + 左侧时间刻度
+  const gridlines = document.createElement('div');
+  gridlines.className = 'exp-gridlines';
+  const axis = document.createElement('div');
+  axis.className = 'exp-axis';
+  for (let i = 0; i < N; i++) {
+    const t = min + (max - min) * i / (N - 1);
+    const y = posOf(t);
+    const line = document.createElement('div');
+    line.className = 'gl'; line.style.top = y + 'px';
+    gridlines.appendChild(line);
+    const tick = document.createElement('div');
+    tick.className = 'tick'; tick.style.top = y + 'px';
+    tick.innerHTML = fmtTick(t);
+    axis.appendChild(tick);
+  }
+  body.appendChild(gridlines);
+  body.appendChild(axis);
+
+  // 每人一条泳道，按时间比例定位
+  people.forEach(p => {
+    const lane = document.createElement('div');
+    lane.className = 'exp-lane';
+    expenses.filter(e => e.personId === p.id)
+      .sort((a, b) => new Date(a.time) - new Date(b.time))
+      .forEach(e => {
+        const t = new Date(e.time).getTime();
+        if (isNaN(t)) return;
+        const item = document.createElement('div');
+        item.className = 'exp-dot-item';
+        item.style.top = posOf(t) + 'px';
+        item.innerHTML =
+          '<span class="dot"></span>' +
+          '<div class="e-card"><span class="e-del" title="删除">✕</span>' +
+          `<div class="e-amt">¥${fmtMoney(e.amount)}</div>` +
+          (e.note ? `<div class="e-note">${esc(e.note)}</div>` : '') +
+          `<div class="e-time">🕒 ${esc(fmtTime(e.time))}</div></div>`;
+        item.querySelector('.e-del').addEventListener('click', () => {
+          trip.expenses = (trip.expenses || []).filter(x => x.id !== e.id);
+          renderExpense();
+          queueSave();
+        });
+        lane.appendChild(item);
+      });
+    body.appendChild(lane);
+  });
+
+  board.appendChild(body);
+
+  // 悬停累计游标
+  const hoverLine = document.createElement('div');
+  hoverLine.className = 'exp-hover-line';
+  const hoverTotal = document.createElement('div');
+  hoverTotal.className = 'exp-hover-total';
+  body.appendChild(hoverLine);
+  body.appendChild(hoverTotal);
+
+  const points = expenses
+    .map(e => ({ y: posOf(new Date(e.time).getTime()), amount: Number(e.amount) || 0 }))
+    .filter(pt => !isNaN(pt.y))
+    .sort((a, b) => a.y - b.y);
+
+  const hide = () => { hoverLine.style.display = 'none'; hoverTotal.style.display = 'none'; };
+  body.addEventListener('mousemove', ev => {
+    const my = ev.clientY - body.getBoundingClientRect().top;
+    let snap = null;
+    for (const pt of points) { if (pt.y <= my) snap = pt; else break; }
+    if (!snap) { hide(); return; }
+    const cumulative = points.reduce((s, pt) => s + (pt.y <= snap.y ? pt.amount : 0), 0);
+    hoverLine.style.top = snap.y + 'px';
+    hoverTotal.style.top = snap.y + 'px';
+    hoverTotal.textContent = '累计 ¥' + fmtMoney(cumulative);
+    hoverLine.style.display = 'block';
+    hoverTotal.style.display = 'block';
+  });
+  body.addEventListener('mouseleave', hide);
 }
 
 // ---- Tab 切换 ----
@@ -83,55 +258,8 @@ function wireChecklist() {
   });
 }
 
-// ---- 花销（动态人员）----
+// ---- 花销弹窗 ----
 let expModalPerson = null;
-
-function wireExpense() {
-  const addP = $('#addPersonBtn');
-  if (addP) addP.addEventListener('click', () => {
-    trip.people = trip.people || [];
-    trip.people.push({ id: genId(), name: '同行人' + (trip.people.length + 1) });
-    renderExpense();
-    queueSave();
-    const inputs = $$('.person-name');
-    if (inputs.length) { const last = inputs[inputs.length - 1]; last.focus(); last.select(); }
-  });
-
-  $$('.person-name').forEach(inp => {
-    inp.addEventListener('input', () => {
-      const pid = inp.closest('.person-card').dataset.pid;
-      const p = (trip.people || []).find(x => x.id === pid);
-      if (p) { p.name = inp.value; queueSave(); }
-    });
-  });
-
-  $$('.person-del').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const pid = btn.closest('.person-card').dataset.pid;
-      if (!confirm('删除该人员及其所有花销记录？')) return;
-      trip.people = (trip.people || []).filter(x => x.id !== pid);
-      trip.expenses = (trip.expenses || []).filter(e => e.personId !== pid);
-      renderExpense();
-      queueSave();
-    });
-  });
-
-  $$('.add-exp-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      expModalPerson = btn.closest('.person-card').dataset.pid;
-      openExpModal();
-    });
-  });
-
-  $$('.exp-del').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const eid = btn.closest('.exp-item').dataset.eid;
-      trip.expenses = (trip.expenses || []).filter(e => e.id !== eid);
-      renderExpense();
-      queueSave();
-    });
-  });
-}
 
 function openExpModal() {
   const p = (trip.people || []).find(x => x.id === expModalPerson);
