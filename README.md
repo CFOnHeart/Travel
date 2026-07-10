@@ -16,9 +16,24 @@ Travel/
 ├── index.html                 # 根跳转页 → 云南/
 ├── 云南/
 │   ├── index.html             # GitHub Pages 首页（旅游计划.html 的副本）
-│   ├── 旅游计划.html          # 页面源文件（编辑这个，再同步到 index.html）
+│   ├── 旅游计划.html          # 页面标记（仅 HTML 结构，引用 css/ 与 js/）
 │   ├── 旅游计划.pdf           # 导出的 PDF 快照
-│   └── images/                # 酒店等图片
+│   ├── css/
+│   │   └── styles.css         # 全部样式
+│   ├── js/                    # ES Modules（职责单一）
+│   │   ├── config.js          # API 地址、常量、参数
+│   │   ├── data.js            # GROUPS / PACKING 清单数据
+│   │   ├── utils.js           # DOM / 转义 / 格式化 / 图片压缩
+│   │   ├── api.js             # 云端 API 封装
+│   │   ├── store.js           # 本地状态 + localStorage
+│   │   ├── status.js          # 同步状态提示
+│   │   ├── lightbox.js        # 图片放大
+│   │   ├── attachmentModal.js # 附件弹窗
+│   │   ├── checklist.js       # 清单渲染 + 同步
+│   │   ├── expenses.js        # 花销看板 + 记账弹窗
+│   │   ├── tabs.js            # Tab 切换 / 菜单按钮
+│   │   └── main.js            # 入口：初始化与编排
+│   └── images/                # 酒店、头像（man.png / woman.png）等图片
 ├── api/                       # 后端 Azure Functions（Node v4）
 │   ├── host.json
 │   ├── package.json
@@ -26,12 +41,15 @@ Travel/
 │   ├── local.settings.json    # 本地配置（已 gitignore）
 │   └── src/functions/
 │       ├── state.js           # GET/POST /api/state
-│       └── upload.js          # POST /api/upload
+│       ├── upload.js          # POST /api/upload
+│       └── expenses.js        # GET/POST/DELETE /api/expenses
 ├── docs/
 │   └── azure-resources.md     # 后端资源创建文档
-├── .github/skills/            # 自动化 skill
-│   ├── deploy-travel-app/     # 部署新代码
-│   └── provision-travel-backend/  # 创建/更新云端资源
+├── .github/
+│   ├── hooks/                 # 文档同步检查 hook
+│   └── skills/                # 自动化 skill
+│       ├── deploy-travel-app/     # 部署新代码
+│       └── provision-travel-backend/  # 创建/更新云端资源
 └── README.md
 ```
 
@@ -40,7 +58,9 @@ Travel/
 ## 一、前端（GitHub Pages）
 
 ### 技术
-- 纯 **HTML + CSS + 原生 JavaScript**，无框架、无构建步骤。
+- 纯 **HTML + CSS + 原生 JavaScript（ES Modules）**，无框架、无构建步骤。
+- 代码分层：`旅游计划.html` 只管结构；`css/styles.css` 管样式；`js/*.js` 按职责拆成 12 个模块（见目录结构）。
+- 依赖方向：`config/data/utils`（叶子）→ `api/store/status`（中间）→ `checklist/expenses/tabs`（视图）→ `main`（编排），无循环依赖。
 - 响应式布局：宽屏左侧固定侧栏，窄屏用 `☰` 折叠。
 - **左侧栏双 Tab**：📋 预定清单 / 🎒 出行物品。
 - **主内容区双 Tab**：🗺️ 行程（航班、酒店、时间轴、费用表） / 💰 花销（4 人共享时间轴）。
@@ -64,16 +84,21 @@ Travel/
 4. 断网时自动回退到本地缓存，状态栏显示"离线"。
 
 ### 关键配置
-- 后端地址写在 [云南/旅游计划.html](云南/旅游计划.html) 脚本顶部：
+- 后端地址写在 [云南/js/config.js](云南/js/config.js) 顶部：
   ```js
-  const API_BASE = 'https://func-yntravel-ue8266.azurewebsites.net/api';
+  export const API_BASE = 'https://func-yntravel-ue8266.azurewebsites.net/api';
   ```
-- 预定清单条目在 `GROUPS`、出行物品在 `PACKING`、花销人物在 `PEOPLE` 数组里定义（`id` 为唯一键，不要随意改动已有 id）。
+- 预定清单与出行物品在 [云南/js/data.js](云南/js/data.js) 的 `GROUPS` / `PACKING`；花销人物与头像在 `config.js` 的 `PEOPLE` / `PERSON_ICON`（`id` 为唯一键，不要随意改动已有 id）。
 
 ### 修改与发布
-1. 编辑 `云南/旅游计划.html`。
-2. 复制成首页：`Copy-Item "云南/旅游计划.html" "云南/index.html" -Force`
-3. 提交推送：`git add -A; git commit -m "..."; git push`，GitHub Pages 自动更新（约 1 分钟）。
+1. 按需编辑 `云南/旅游计划.html`（结构）、`云南/css/styles.css`（样式）或 `云南/js/*.js`（逻辑/数据）。
+2. 本地预览：**ES 模块不能用 `file://` 直接双击打开**，请用本地服务器：
+   ```powershell
+   python -m http.server 3000 -d 云南   # 然后访问 http://localhost:3000/旅游计划.html
+   ```
+   （`http://localhost:3000` 已在后端 CORS 白名单中，本地也能联调云端）。
+3. 同步为首页：`Copy-Item "云南/旅游计划.html" "云南/index.html" -Force`
+4. 提交推送：`git add -A; git commit -m "..."; git push`，GitHub Pages（https）自动更新（约 1 分钟）。
 
 > 也可以直接用 skill：`/deploy-travel-app`，见下文。
 
