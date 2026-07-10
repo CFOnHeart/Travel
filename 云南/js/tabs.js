@@ -1,39 +1,24 @@
 /**
- * 侧边栏 Tab、主内容 Tab、移动端菜单按钮的切换逻辑。
+ * 主内容 Tab 切换逻辑（行程 / 预定清单 / 出行物品 / 花销）。
  */
 import { $, $$ } from './utils.js';
 import { loadExpenses } from './expenses.js';
 
-function initSidebarTabs() {
-  $$('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      $$('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
-      const tab = btn.dataset.tab;
-      $('#panel-booking').classList.toggle('active', tab === 'booking');
-      $('#panel-packing').classList.toggle('active', tab === 'packing');
-    });
-  });
-}
+const PANELS = ['trip', 'booking', 'packing', 'expense'];
 
 function initMainTabs() {
   $$('.main-tab').forEach(btn => {
     btn.addEventListener('click', () => {
-      $$('.main-tab').forEach(b => b.classList.toggle('active', b === btn));
       const tab = btn.dataset.mtab;
-      $('#mpanel-trip').classList.toggle('active', tab === 'trip');
-      $('#mpanel-expense').classList.toggle('active', tab === 'expense');
+      $$('.main-tab').forEach(b => b.classList.toggle('active', b === btn));
+      PANELS.forEach(p => $('#mpanel-' + p).classList.toggle('active', p === tab));
       if (tab === 'expense') loadExpenses();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     });
   });
 }
 
-function initMenuButton() {
-  const btn = $('#menuBtn');
-  if (btn) btn.addEventListener('click', () => $('.sidebar').classList.toggle('open'));
+export function initTabs() {
+  initMainTabs();
 }
 
-export function initTabs() {
-  initSidebarTabs();
-  initMainTabs();
-  initMenuButton();
-}

@@ -21,105 +21,81 @@ body {
 }
 a { color: inherit; text-decoration: none; }
 
-.layout { display: flex; align-items: flex-start; }
-
-/* ============ Sidebar ============ */
-.sidebar {
-  width: var(--sidebar-w);
-  flex-shrink: 0;
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  overflow-y: auto;
-  background: #0c2d25;
-  color: #dff0ea;
-  padding: 24px 20px 40px;
+/* ============ Checklist（预定清单 / 出行物品）============ */
+.checklist-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap; margin-bottom: 4px;
 }
-.sidebar h2 {
-  font-size: 1.15rem; font-weight: 800; color: #fff;
-  display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
-}
-.sidebar .sub { font-size: .8rem; color: #8fbfb0; margin-bottom: 18px; }
+.checklist-head h2 { font-size: 1.5rem; font-weight: 800; color: var(--primary); }
+.checklist-head .sub { color: var(--muted); font-size: .92rem; margin-top: 4px; }
+.checklist-actions { display: flex; align-items: center; gap: 8px; }
 
-/* Sidebar tabs */
-.tabs { display: flex; gap: 6px; margin: 4px 0 14px; }
-.tab-btn {
-  flex: 1; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12);
-  color: #b9d8cd; border-radius: 10px; padding: 8px 6px; font-size: .84rem; font-weight: 700;
-  cursor: pointer; font-family: inherit; transition: all .15s;
+.progress-wrap { margin: 14px 0 20px; }
+.progress-bar { height: 10px; background: #e3ece8; border-radius: 999px; overflow: hidden; }
+.progress-bar > span {
+  display: block; height: 100%; width: 30%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .3s ease;
 }
-.tab-btn:hover { background: rgba(255,255,255,.12); }
-.tab-btn.active { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; border-color: transparent; }
-.tab-panel { display: none; }
-.tab-panel.active { display: block; }
-.progress-wrap { margin-bottom: 22px; }
-.progress-bar { height: 8px; background: rgba(255,255,255,.12); border-radius: 999px; overflow: hidden; }
-.progress-bar > span { display: block; height: 100%; width: 30%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
-.progress-label { font-size: .78rem; color: #a9d3c6; margin-top: 6px; }
+.progress-label { font-size: .82rem; color: var(--muted); margin-top: 7px; }
 
-.todo-group { margin-bottom: 20px; }
+.checklist-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px; align-items: start;
+}
+.todo-group {
+  background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+  box-shadow: var(--shadow); padding: 16px 18px;
+}
 .todo-group > .g-title {
   font-size: .82rem; text-transform: uppercase; letter-spacing: 1px;
-  color: #6fb6a2; font-weight: 700; margin-bottom: 8px;
+  color: var(--primary); font-weight: 800; margin-bottom: 10px;
   display: flex; align-items: center; gap: 6px;
 }
 .todo {
-  display: flex; align-items: flex-start; gap: 9px;
-  padding: 8px 10px; border-radius: 10px; margin-bottom: 6px;
-  background: rgba(255,255,255,.04); font-size: .86rem;
+  display: flex; flex-wrap: wrap; align-items: flex-start; gap: 9px;
+  padding: 9px 10px; border-radius: 10px; margin-bottom: 6px;
+  background: #f6faf8; border: 1px solid var(--line); font-size: .9rem;
 }
+.todo.done { background: #eefaf4; border-color: #cdeede; }
 .todo .box {
-  flex-shrink: 0; width: 18px; height: 18px; border-radius: 5px; margin-top: 2px;
+  flex-shrink: 0; width: 20px; height: 20px; border-radius: 6px; margin-top: 1px;
   display: inline-flex; align-items: center; justify-content: center;
-  font-size: .7rem; font-weight: 800;
+  font-size: .72rem; font-weight: 800; cursor: pointer; transition: transform .1s;
 }
-.todo.done .box { background: #17c08b; color: #063; }
-.todo.pending .box { background: rgba(255,255,255,.12); color: #cfe; border: 1px dashed rgba(255,255,255,.3); }
-.todo .t-main { flex: 1; }
-.todo .t-main .t-name { color: #eaf7f2; font-weight: 600; }
-.todo .t-main .t-meta { font-size: .74rem; color: #8fbfb0; margin-top: 1px; }
-.todo.done .who {
-  font-size: .7rem; background: #17c08b; color: #05372a;
-  padding: 1px 7px; border-radius: 999px; font-weight: 700; white-space: nowrap; align-self: center;
-}
-.todo.pending .who {
-  font-size: .7rem; background: rgba(255,255,255,.1); color: #b9d8cd;
-  padding: 1px 7px; border-radius: 999px; white-space: nowrap; align-self: center;
-}
-
-/* Interactive todo */
-.todo { flex-wrap: wrap; }
-.todo .box { cursor: pointer; transition: transform .1s; }
 .todo .box:hover { transform: scale(1.15); }
+.todo.done .box { background: #17c08b; color: #fff; }
+.todo.pending .box { background: #fff; color: #17c08b; border: 1px dashed #b6cfc5; }
+.todo .t-main { flex: 1; min-width: 0; }
+.todo .t-main .t-name { color: var(--text); font-weight: 600; }
+.todo .t-main .t-meta { font-size: .78rem; color: var(--muted); margin-top: 1px; }
+
 .todo .t-row2 {
-  width: 100%; display: flex; align-items: center; gap: 6px; margin-top: 7px; padding-left: 27px;
+  width: 100%; display: flex; align-items: center; gap: 6px; margin-top: 7px; padding-left: 29px;
 }
 .todo .who-input {
-  flex: 1; min-width: 0; background: rgba(255,255,255,.08);
-  border: 1px solid rgba(255,255,255,.15); border-radius: 7px;
-  color: #eaf7f2; font-size: .74rem; padding: 3px 8px; font-family: inherit;
+  flex: 1; min-width: 0; background: #fff; border: 1px solid var(--line);
+  border-radius: 8px; color: var(--text); font-size: .78rem; padding: 4px 9px; font-family: inherit;
 }
-.todo.done .who-input { background: rgba(23,192,139,.18); border-color: rgba(23,192,139,.5); color: #d7fff0; }
-.todo .who-input::placeholder { color: #7fa89b; }
+.todo.done .who-input { background: #f0fbf6; border-color: #bfe6d8; }
+.todo .who-input::placeholder { color: #9fb3ab; }
 .todo .attach-btn {
-  flex-shrink: 0; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15);
-  color: #cfe; border-radius: 7px; font-size: .74rem; padding: 3px 9px; cursor: pointer;
+  flex-shrink: 0; background: #eef3f1; border: 1px solid var(--line);
+  color: #3a5850; border-radius: 8px; font-size: .78rem; padding: 4px 10px; cursor: pointer;
   display: inline-flex; align-items: center; gap: 5px; font-family: inherit;
 }
-.todo .attach-btn:hover { background: rgba(255,255,255,.16); }
+.todo .attach-btn:hover { background: #e2ebe7; }
 .todo .attach-btn .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); display: none; }
 .todo.has-attach .attach-btn .dot { display: inline-block; }
 
-.sidebar-actions { margin-top: 10px; }
 .mini-btn {
-  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.15);
-  color: #b9d8cd; border-radius: 8px; padding: 6px 14px; font-size: .78rem; cursor: pointer; font-family: inherit;
+  background: #eef3f1; border: 1px solid var(--line);
+  color: #3a5850; border-radius: 8px; padding: 7px 14px; font-size: .82rem; cursor: pointer; font-family: inherit;
 }
-.mini-btn:hover { background: rgba(255,255,255,.14); }
-.sync-status { font-size: .72rem; color: #8fbfb0; margin-left: 8px; }
-.sync-status.saving { color: #ffd08a; }
-.sync-status.error { color: #ff9d8a; }
-.sidebar-note { font-size: .72rem; color: #6fa294; margin-top: 12px; line-height: 1.5; }
+.mini-btn:hover { background: #e2ebe7; }
+.sync-status { font-size: .78rem; color: var(--muted); }
+.sync-status.saving { color: #c58a2a; }
+.sync-status.error { color: #c0561f; }
+.sidebar-note { font-size: .8rem; color: var(--muted); margin-top: 16px; line-height: 1.6; }
 
 /* ============ Modal ============ */
 .modal-mask {
@@ -286,38 +262,22 @@ a { color: inherit; text-decoration: none; }
 
 footer { text-align: center; color: var(--muted); font-size: .84rem; padding: 26px 20px 46px; }
 
-/* Mobile sidebar toggle */
-.menu-btn {
-  display: none; position: fixed; top: 14px; left: 14px; z-index: 50;
-  background: var(--primary); color: #fff; border: none; border-radius: 10px;
-  width: 44px; height: 44px; font-size: 1.2rem; box-shadow: var(--shadow); cursor: pointer;
-}
-
-@media (max-width: 900px) {
-  .menu-btn { display: block; }
-  .sidebar {
-    position: fixed; left: 0; top: 0; z-index: 40;
-    transform: translateX(-100%); transition: transform .25s ease;
-    box-shadow: 6px 0 30px rgba(0,0,0,.3);
-  }
-  .sidebar.open { transform: translateX(0); }
-  .hero { padding-top: 64px; }
-}
 @media (max-width: 640px) {
   .hero h1 { font-size: 1.6rem; }
   .flight .price { text-align: left; }
   .hotel-card img { width: 100%; height: 200px; }
+  .checklist-grid { grid-template-columns: 1fr; }
 }
 
 /* ============ Main content tabs ============ */
 .main-tabs {
   position: relative; z-index: 3; max-width: 860px; margin: -34px auto 0; padding: 0 20px;
-  display: flex; gap: 10px; justify-content: center;
+  display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
 }
 .main-tab {
-  flex: 0 0 auto; min-width: 140px; text-align: center;
+  flex: 0 0 auto; text-align: center;
   background: #fff; border: 1px solid var(--line); color: var(--muted);
-  border-radius: 999px; padding: 11px 26px; font-size: 1rem; font-weight: 800;
+  border-radius: 999px; padding: 11px 22px; font-size: 1rem; font-weight: 800;
   cursor: pointer; font-family: inherit; box-shadow: var(--shadow); transition: all .15s;
 }
 .main-tab:hover { color: var(--primary); }

@@ -7,45 +7,6 @@
 <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-  <button class="menu-btn" id="menuBtn" type="button" aria-label="打开菜单">☰</button>
-  <div class="layout">
-
-    <!-- ===== 侧边栏：多 Tab ===== -->
-    <aside class="sidebar">
-      <h2>🧭 云南之旅</h2>
-      <div class="tabs">
-        <button class="tab-btn active" type="button" data-tab="booking">📋 预定清单</button>
-        <button class="tab-btn" type="button" data-tab="packing">🎒 出行物品</button>
-      </div>
-
-      <!-- Tab 1：预定清单 -->
-      <div class="tab-panel active" id="panel-booking">
-        <div class="sub">交通 · 租车 · 门票 · 住宿</div>
-        <div class="progress-wrap">
-          <div class="progress-bar"><span id="progressFill" style="width:0%"></span></div>
-          <div class="progress-label" id="progressLabel">已完成 0 / 0 项</div>
-        </div>
-        <div id="todoContainer"></div>
-      </div>
-
-      <!-- Tab 2：出行物品 -->
-      <div class="tab-panel" id="panel-packing">
-        <div class="sub">按路线 · 季节整理的行李清单</div>
-        <div class="progress-wrap">
-          <div class="progress-bar"><span id="packFill" style="width:0%"></span></div>
-          <div class="progress-label" id="packLabel">已准备 0 / 0 项</div>
-        </div>
-        <div id="packingContainer"></div>
-        <div class="sidebar-note" style="margin-top:8px;">🧠 已结合西双版纳（热带·雨季）、丽江/玉龙雪山/泸沽湖（高原·温差大·强紫外线）与自驾行程补充建议物品。</div>
-      </div>
-
-      <div class="sidebar-actions">
-        <button class="mini-btn" id="refreshBtn" type="button" title="从云端同步最新状态">🔄 刷新</button>
-        <span class="sync-status" id="syncStatus"></span>
-      </div>
-      <div class="sidebar-note">☁️ 勾选会实时同步到云端，同伴刷新即可看到。</div>
-    </aside>
-
     <!-- ===== 主内容 ===== -->
     <div class="content">
       <header class="hero">
@@ -54,10 +15,12 @@
         <div class="dates">📅 2026年7月17日 — 7月25日 · 9天</div>
       </header>
 
-      <div class="main-tabs">
+      <nav class="main-tabs">
         <button class="main-tab active" type="button" data-mtab="trip">🗺️ 行程</button>
+        <button class="main-tab" type="button" data-mtab="booking">📋 预定清单</button>
+        <button class="main-tab" type="button" data-mtab="packing">🎒 出行物品</button>
         <button class="main-tab" type="button" data-mtab="expense">💰 花销</button>
-      </div>
+      </nav>
 
       <main class="wrap main-panel active" id="mpanel-trip">
 
@@ -257,6 +220,40 @@
 
       </main>
 
+      <section class="wrap main-panel" id="mpanel-booking">
+        <div class="checklist-head">
+          <div>
+            <h2>📋 预定清单</h2>
+            <p class="sub">交通 · 租车 · 门票 · 住宿</p>
+          </div>
+          <div class="checklist-actions">
+            <button class="mini-btn" id="refreshBtn" type="button" title="从云端同步最新状态">🔄 刷新</button>
+            <span class="sync-status" id="syncStatus"></span>
+          </div>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-bar"><span id="progressFill" style="width:0%"></span></div>
+          <div class="progress-label" id="progressLabel">已完成 0 / 0 项</div>
+        </div>
+        <div id="todoContainer" class="checklist-grid"></div>
+        <div class="sidebar-note">☁️ 勾选会实时同步到云端，同伴刷新即可看到。</div>
+      </section>
+
+      <section class="wrap main-panel" id="mpanel-packing">
+        <div class="checklist-head">
+          <div>
+            <h2>🎒 出行物品</h2>
+            <p class="sub">按路线 · 季节整理的行李清单</p>
+          </div>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-bar"><span id="packFill" style="width:0%"></span></div>
+          <div class="progress-label" id="packLabel">已准备 0 / 0 项</div>
+        </div>
+        <div id="packingContainer" class="checklist-grid"></div>
+        <div class="sidebar-note">🧠 已结合西双版纳（热带·雨季）、丽江/玉龙雪山/泸沽湖（高原·温差大·强紫外线）与自驾行程补充建议物品。</div>
+      </section>
+
       <section class="wrap main-panel" id="mpanel-expense">
         <div class="exp-head">
           <h2>💰 花销登记</h2>
@@ -270,7 +267,6 @@
         🌿 云南度假计划 · 具体价格与航班请以实时预订为准 · 祝旅途愉快！
       </footer>
     </div>
-  </div>
 
   <!-- 附件弹窗 -->
   <div class="modal-mask" id="attachModal">
