@@ -2,9 +2,12 @@
 import { getTrip, saveTrip } from './api.js';
 import { RECENT_KEY } from './config.js';
 import {
-  renderHero, renderSections, renderChecklistPanel, renderPackingPanel
+  renderHero, renderSections, renderChecklistPanel, renderPackingPanel, renderExpensePanel
 } from './render.js';
 import { initEditor, setEditorData } from './editor.js';
+
+const PANELS = ['trip', 'booking', 'packing', 'expense'];
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
@@ -26,8 +29,14 @@ function renderAll() {
   $('#mpanel-trip').innerHTML = renderSections(trip.sections || []);
   $('#mpanel-booking').innerHTML = renderChecklistPanel(trip);
   $('#mpanel-packing').innerHTML = renderPackingPanel(trip);
+  renderExpense();
   document.title = (trip.meta && trip.meta.title) || '我的行程';
   wireChecklist();
+}
+
+function renderExpense() {
+  $('#mpanel-expense').innerHTML = renderExpensePanel(trip);
+  wireExpense();
 }
 
 // ---- Tab 切换 ----
@@ -36,7 +45,7 @@ function initTabs() {
     btn.addEventListener('click', () => {
       const tab = btn.dataset.mtab;
       $$('.main-tab').forEach(b => b.classList.toggle('active', b === btn));
-      ['trip', 'booking', 'packing'].forEach(p =>
+      PANELS.forEach(p =>
         $('#mpanel-' + p).classList.toggle('active', p === tab));
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
@@ -71,6 +80,88 @@ function wireChecklist() {
       it.who = input.value;
       queueSave();
     });
+  });
+}
+
+// ---- 花销（动态人员）----
+let expModalPerson = null;
+
+function wireExpense() {
+  const addP = $('#addPersonBtn');
+  if (addP) addP.addEventListener('click', () => {
+    trip.people = trip.people || [];
+    trip.people.push({ id: genId(), name: '同行人' + (trip.people.length + 1) });
+    renderExpense();
+    queueSave();
+    const inputs = $$('.person-name');
+    if (inputs.length) { const last = inputs[inputs.length - 1]; last.focus(); last.select(); }
+  });
+
+  $$('.person-name').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const pid = inp.closest('.person-card').dataset.pid;
+      const p = (trip.people || []).find(x => x.id === pid);
+      if (p) { p.name = inp.value; queueSave(); }
+    });
+  });
+
+  $$('.person-del').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const pid = btn.closest('.person-card').dataset.pid;
+      if (!confirm('删除该人员及其所有花销记录？')) return;
+      trip.people = (trip.people || []).filter(x => x.id !== pid);
+      trip.expenses = (trip.expenses || []).filter(e => e.personId !== pid);
+      renderExpense();
+      queueSave();
+    });
+  });
+
+  $$('.add-exp-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      expModalPerson = btn.closest('.person-card').dataset.pid;
+      openExpModal();
+    });
+  });
+
+  $$('.exp-del').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const eid = btn.closest('.exp-item').dataset.eid;
+      trip.expenses = (trip.expenses || []).filter(e => e.id !== eid);
+      renderExpense();
+      queueSave();
+    });
+  });
+}
+
+function openExpModal() {
+  const p = (trip.people || []).find(x => x.id === expModalPerson);
+  $('#expPerson').textContent = p ? ('为「' + (p.name || '') + '」记一笔') : '';
+  $('#expAmount').value = '';
+  $('#expNote').value = '';
+  const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+  $('#expTime').value = now.toISOString().slice(0, 16);
+  $('#expModal').classList.add('open');
+  $('#expAmount').focus();
+}
+function closeExpModal() { $('#expModal').classList.remove('open'); }
+
+function initExpenseModal() {
+  $('#expCancel').addEventListener('click', closeExpModal);
+  $('#expModal').addEventListener('click', e => { if (e.target.id === 'expModal') closeExpModal(); });
+  $('#expSave').addEventListener('click', () => {
+    const amount = Number($('#expAmount').value);
+    if (!isFinite(amount) || amount <= 0) { $('#expAmount').focus(); return; }
+    trip.expenses = trip.expenses || [];
+    trip.expenses.push({
+      id: genId(),
+      personId: expModalPerson,
+      amount,
+      note: $('#expNote').value.trim().slice(0, 200),
+      time: $('#expTime').value || new Date().toISOString()
+    });
+    closeExpModal();
+    renderExpense();
+    queueSave();
   });
 }
 
@@ -118,9 +209,12 @@ async function init() {
   initTabs();
   initShare();
   initEditor(onEditorSave);
+  initExpenseModal();
   showOverlay('加载行程中…');
   try {
     trip = await getTrip(tripId);
+    trip.people = trip.people || [];
+    trip.expenses = trip.expenses || [];
     setEditorData(trip);
     renderAll();
     rememberRecent();

@@ -193,3 +193,61 @@ export function renderPackingPanel(trip) {
     </div>
     <div class="checklist-grid">${cards || '<p class="sidebar-note">暂无物品项。</p>'}</div>`;
 }
+
+// ---------- 花销（动态人员）----------
+function fmtTime(t) {
+  if (!t) return '';
+  const d = new Date(t);
+  if (isNaN(d)) return esc(t);
+  const p = n => String(n).padStart(2, '0');
+  return `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+export function renderExpensePanel(trip) {
+  const people = trip.people || [];
+  const expenses = trip.expenses || [];
+  const sumOf = pid => expenses.filter(e => e.personId === pid).reduce((a, e) => a + (Number(e.amount) || 0), 0);
+  const grand = expenses.reduce((a, e) => a + (Number(e.amount) || 0), 0);
+
+  const hint = `<div class="exp-hint">💡 先点击「＋ 添加人员」加入同行的人，再为每个人「记一笔」，系统会自动统计每人小计与总花销。</div>`;
+
+  const empty = `
+    <div class="exp-empty-big">
+      <div class="ee-icon">🧑‍🤝‍🧑</div>
+      <p class="ee-title">还没有添加同行人员</p>
+      <p class="ee-sub">点击上方「＋ 添加人员」，添加后即可为每个人记录花销并自动统计。</p>
+    </div>`;
+
+  const cards = people.map(p => {
+    const list = expenses
+      .filter(e => e.personId === p.id)
+      .sort((a, b) => String(a.time).localeCompare(String(b.time)))
+      .map(e => `
+        <div class="exp-item" data-eid="${esc(e.id)}">
+          <span class="ea">¥${esc(e.amount)}</span>
+          <span class="en">${esc(e.note || '')}</span>
+          <span class="et">${fmtTime(e.time)}</span>
+          <button class="exp-del" type="button" title="删除">×</button>
+        </div>`).join('');
+    return `
+      <div class="person-card" data-pid="${esc(p.id)}">
+        <div class="person-head">
+          <input class="person-name" value="${esc(p.name || '')}" placeholder="姓名">
+          <button class="person-del" type="button" title="删除人员">🗑️</button>
+        </div>
+        <div class="person-total">¥${sumOf(p.id).toFixed(2).replace(/\.00$/, '')}<small>小计</small></div>
+        <div class="exp-list">${list || '<div class="exp-empty">还没有记录</div>'}</div>
+        <button class="add-exp-btn" type="button">＋ 记一笔</button>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="exp-head">
+      <h2>💰 花销统计</h2>
+      <p class="sub">添加同行人员后即可记录并统计每人花销</p>
+      <div class="exp-grand" id="expGrand">总花销 ¥${grand.toFixed(2).replace(/\.00$/, '')}</div>
+    </div>
+    ${hint}
+    <div class="exp-toolbar"><button class="tool-btn primary" id="addPersonBtn" type="button">＋ 添加人员</button></div>
+    ${people.length ? `<div class="exp-people">${cards}</div>` : empty}`;
+}

@@ -420,3 +420,37 @@ footer { text-align: center; color: var(--muted); font-size: .84rem; padding: 26
 @media (max-width: 640px) {
   .home-hero h1 { font-size: 1.6rem; }
 }
+
+/* ---- 花销（动态人员）---- */
+.exp-hint {
+  background: #fff6ec; border: 1px solid #ffe0c2; color: #9a5a1f;
+  border-radius: 12px; padding: 12px 16px; font-size: .9rem; margin: 4px 0 16px; line-height: 1.6;
+}
+.exp-toolbar { display: flex; justify-content: center; margin-bottom: 20px; }
+.exp-people { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; align-items: start; }
+.person-card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 16px; }
+.person-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.person-name {
+  flex: 1; min-width: 0; font-size: 1.05rem; font-weight: 800; color: var(--text);
+  border: 1px solid transparent; border-radius: 8px; padding: 4px 8px; background: #f6faf8; font-family: inherit;
+}
+.person-name:focus-visible { outline: 2px solid var(--primary-light); outline-offset: 0; background: #fff; }
+.person-del { background: none; border: none; cursor: pointer; font-size: 1rem; opacity: .55; }
+.person-del:hover { opacity: 1; }
+.person-total { font-size: 1.4rem; font-weight: 800; color: var(--accent); margin-bottom: 10px; }
+.person-total small { font-size: .7rem; color: var(--muted); font-weight: 500; margin-left: 4px; }
+.exp-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.exp-item { display: flex; align-items: center; gap: 8px; background: #f6faf8; border: 1px solid var(--line); border-radius: 9px; padding: 6px 9px; font-size: .84rem; }
+.exp-item .ea { font-weight: 800; color: var(--accent); white-space: nowrap; }
+.exp-item .en { flex: 1; min-width: 0; color: #3a5850; word-break: break-word; }
+.exp-item .et { font-size: .7rem; color: var(--muted); white-space: nowrap; }
+.exp-item .exp-del { background: none; border: none; color: #c0561f; cursor: pointer; font-size: .95rem; opacity: 0; }
+.exp-item:hover .exp-del { opacity: 1; }
+.exp-item .exp-empty, .exp-list > .exp-empty { color: var(--muted); }
+.exp-list .exp-empty { font-size: .82rem; color: var(--muted); text-align: center; padding: 8px 0; }
+.add-exp-btn { width: 100%; background: #eafaf4; color: var(--primary); border: 1px dashed #bfe6d8; border-radius: 9px; padding: 7px; font-size: .84rem; font-weight: 700; cursor: pointer; font-family: inherit; }
+.add-exp-btn:hover { background: #dff4ec; }
+.exp-empty-big { text-align: center; padding: 40px 20px; color: var(--muted); }
+.exp-empty-big .ee-icon { font-size: 2.6rem; }
+.exp-empty-big .ee-title { font-size: 1.05rem; font-weight: 700; color: #3a5850; margin-top: 10px; }
+.exp-empty-big .ee-sub { font-size: .9rem; margin-top: 6px; }
