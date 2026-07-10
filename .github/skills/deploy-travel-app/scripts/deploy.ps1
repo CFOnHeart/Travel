@@ -24,11 +24,15 @@ $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..\..")).Path
 Set-Location $RepoRoot
 Write-Host "Repo root: $RepoRoot" -ForegroundColor Cyan
 
-# Derive Function App name from API_BASE in the HTML
+# Derive Function App name from API_BASE (js/config.js, fallback to the HTML)
 function Get-FunctionAppName {
-  $html = Get-Content "云南/旅游计划.html" -Raw
-  if ($html -match "https://([a-z0-9-]+)\.azurewebsites\.net/api") { return $Matches[1] }
-  throw "Could not find API_BASE Function App name in 云南/旅游计划.html"
+  foreach ($f in @("云南/js/config.js", "云南/旅游计划.html")) {
+    if (Test-Path $f) {
+      $text = Get-Content $f -Raw
+      if ($text -match "https://([a-z0-9-]+)\.azurewebsites\.net/api") { return $Matches[1] }
+    }
+  }
+  throw "Could not find API_BASE Function App name in js/config.js or the HTML"
 }
 
 if ($Scope -in @('frontend', 'all')) {

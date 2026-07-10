@@ -40,9 +40,13 @@ function Assert-Login {
 }
 
 function Get-FunctionAppName {
-  $html = Get-Content $Html -Raw
-  if ($html -match "https://([a-z0-9-]+)\.azurewebsites\.net/api") { return $Matches[1] }
-  throw "Could not find API_BASE Function App name in $Html"
+  foreach ($f in @("云南/js/config.js", $Html)) {
+    if (Test-Path $f) {
+      $text = Get-Content $f -Raw
+      if ($text -match "https://([a-z0-9-]+)\.azurewebsites\.net/api") { return $Matches[1] }
+    }
+  }
+  throw "Could not find API_BASE Function App name in js/config.js or $Html"
 }
 
 function Set-Cors($func, $rg) {
@@ -101,12 +105,12 @@ if ($Mode -eq 'new') {
   Set-Cors $func $ResourceGroup
   Publish-Code $func
 
-  # Rewrite API_BASE in the frontend
+  # Rewrite API_BASE in the frontend config (js/config.js)
   $newBase = "https://$func.azurewebsites.net/api"
-  (Get-Content $Html -Raw) -replace "https://[a-z0-9-]+\.azurewebsites\.net/api", $newBase |
-    Set-Content $Html -NoNewline
-  Copy-Item $Html "云南/index.html" -Force
-  Write-Host "Frontend API_BASE updated to $newBase and synced to index.html" -ForegroundColor Yellow
+  $cfg = "云南/js/config.js"
+  (Get-Content $cfg -Raw) -replace "https://[a-z0-9-]+\.azurewebsites\.net/api", $newBase |
+    Set-Content $cfg -NoNewline
+  Write-Host "Frontend API_BASE updated to $newBase in js/config.js" -ForegroundColor Yellow
   Write-Host "NEXT: deploy the frontend -> /deploy-travel-app (or deploy.ps1 -Scope frontend)" -ForegroundColor Yellow
 
   Test-Api $func

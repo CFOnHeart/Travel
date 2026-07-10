@@ -19,7 +19,7 @@ Publishes the latest code for the 云南 travel project:
 - Run from repo root `Travel/`.
 - `git` remote `origin` points to the GitHub repo (Pages enabled on `main` / root).
 - For backend: `az login` is active and `func` (Azure Functions Core Tools v4) is installed.
-- Target Function App name is in `云南/旅游计划.html` as `API_BASE`
+- Target Function App name is in `云南/js/config.js` as `API_BASE`
   (currently `func-yntravel-ue8266`). Derive the app name from that URL.
 
 ## Scope
@@ -46,7 +46,7 @@ Default is **all**. If the user says only "frontend" or "backend", do just that 
    ```powershell
    az account show --query "{user:user.name, sub:name}" -o json
    ```
-   Extract the Function App name from `API_BASE` in `云南/旅游计划.html`.
+   Extract the Function App name from `API_BASE` in `云南/js/config.js`.
 2. Publish:
    ```powershell
    cd api
@@ -77,4 +77,4 @@ See [deploy.ps1](./scripts/deploy.ps1). Pass `-Scope frontend` or `-Scope backen
 - Do **not** commit `api/node_modules` or `api/local.settings.json` (already gitignored).
 - If `func` is missing: `npm install -g azure-functions-core-tools@4`.
 - If push is rejected, `git pull --rebase origin main` then push again.
-- If you changed the Function App name, update `API_BASE` in the HTML first, then deploy frontend too.
+- If you changed the Function App name, update `API_BASE` in `云南/js/config.js` first, then deploy frontend too.

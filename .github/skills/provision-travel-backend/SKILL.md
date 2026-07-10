@@ -18,7 +18,7 @@ existing one (**update**): resource group, Storage account (Table + Blob), Funct
 ## Modes
 | Mode | What it does |
 |------|--------------|
-| `new` | Generates a unique 6-char suffix, creates RG + Storage + Function App, sets CORS + app settings, deploys code, and **updates `API_BASE` in the frontend**. |
+| `new` | Generates a unique 6-char suffix, creates RG + Storage + Function App, sets CORS + app settings, deploys code, and **updates `API_BASE` in `云南/js/config.js`**. |
 | `update` | Uses the existing Function App (from `API_BASE`), re-applies CORS + app settings, and redeploys code. Does not recreate resources. |
 
 Ask the user which mode if unclear. Default region: `eastasia`.
@@ -59,7 +59,7 @@ See [provision.ps1](./scripts/provision.ps1).
 4. Create Function App `func-yntravel-<suffix>` (Linux, consumption, Node 22, v4).
 5. Set `AzureWebJobsFeatureFlags` and add CORS origins.
 6. `func azure functionapp publish` from `api/`.
-7. Rewrite `API_BASE` in `云南/旅游计划.html`, sync `云南/index.html`.
+7. Rewrite `API_BASE` in `云南/js/config.js`.
 8. Smoke-test `GET /api/state`.
 
 ### What the script does (update mode)
