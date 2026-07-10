@@ -112,6 +112,35 @@ function renderBoard() {
   });
 
   board.appendChild(body);
+
+  // 悬停累计游标：虚线吸附到「当前或上方第一笔」的高度，右侧显示该时间点之前的累计消费
+  const hoverLine = document.createElement('div');
+  hoverLine.className = 'exp-hover-line';
+  const hoverTotal = document.createElement('div');
+  hoverTotal.className = 'exp-hover-total';
+  body.appendChild(hoverLine);
+  body.appendChild(hoverTotal);
+
+  const points = all
+    .map(e => ({ y: posOf(new Date(e.time).getTime()), amount: Number(e.amount) || 0 }))
+    .filter(p => !isNaN(p.y))
+    .sort((a, b) => a.y - b.y);
+
+  function hideCursor() { hoverLine.style.display = 'none'; hoverTotal.style.display = 'none'; }
+
+  body.addEventListener('mousemove', ev => {
+    const my = ev.clientY - body.getBoundingClientRect().top;
+    let snap = null;
+    for (const p of points) { if (p.y <= my) snap = p; else break; } // 当前或上方最近一笔
+    if (!snap) { hideCursor(); return; }
+    const cumulative = points.reduce((s, p) => s + (p.y <= snap.y ? p.amount : 0), 0);
+    hoverLine.style.top = snap.y + 'px';
+    hoverTotal.style.top = snap.y + 'px';
+    hoverTotal.textContent = '累计 ¥' + fmtMoney(cumulative);
+    hoverLine.style.display = 'block';
+    hoverTotal.style.display = 'block';
+  });
+  body.addEventListener('mouseleave', hideCursor);
 }
 
 // ---- 记账弹窗 ----

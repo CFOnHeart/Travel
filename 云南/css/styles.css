@@ -362,3 +362,15 @@ footer { text-align: center; color: var(--muted); font-size: .84rem; padding: 26
 .e-card .e-del { position: absolute; right: 5px; top: 4px; color: #c0561f; font-size: .74rem; cursor: pointer; opacity: 0; transition: opacity .15s; }
 .e-card:hover .e-del { opacity: 1; }
 .exp-empty { color: var(--muted); font-size: .88rem; text-align: center; padding: 24px 0; }
+
+/* 悬停累计游标 */
+.exp-hover-line {
+  position: absolute; left: 0; right: 0; height: 0;
+  border-top: 2px dashed var(--accent); z-index: 4; display: none; pointer-events: none;
+}
+.exp-hover-total {
+  position: absolute; right: 6px; transform: translateY(-50%);
+  background: var(--accent); color: #fff; font-size: .72rem; font-weight: 800;
+  padding: 3px 10px; border-radius: 999px; z-index: 6; display: none; pointer-events: none;
+  white-space: nowrap; box-shadow: 0 2px 10px rgba(255,138,61,.45);
+}
