@@ -40,3 +40,15 @@ export async function chatTrip(tripId, trip, messages) {
   if (!resp.ok) throw new Error(data.error || `助手出错（${resp.status}）`);
   return data; // { reply, updatedTrip, focus }
 }
+
+/** 上传预定清单条目的图片凭证，返回可访问的 blob URL。 */
+export async function uploadImage(id, dataUrl) {
+  const resp = await fetch(`${API_BASE}/upload`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ id, dataUrl })
+  });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(data.error || `上传失败（${resp.status}）`);
+  return data.url;
+}

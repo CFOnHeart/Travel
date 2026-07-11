@@ -158,8 +158,9 @@ export function renderChecklistPanel(trip) {
 }
 
 function todoRow(it) {
+  const hasAttach = !!(it.img || it.note);
   return `
-    <div class="todo ${it.done ? 'done' : 'pending'}" data-id="${esc(it.id)}">
+    <div class="todo ${it.done ? 'done' : 'pending'}${hasAttach ? ' has-attach' : ''}" data-id="${esc(it.id)}">
       <span class="box">${it.done ? '✓' : ''}</span>
       <div class="t-main">
         <div class="t-name">${esc(it.name || '')}</div>
@@ -167,6 +168,7 @@ function todoRow(it) {
       </div>
       <div class="t-row2">
         <input class="who-input" placeholder="完成人…" value="${esc(it.who || '')}">
+        <button class="attach-btn" type="button">📎 附件<span class="dot"></span></button>
       </div>
     </div>`;
 }

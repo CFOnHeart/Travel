@@ -1,5 +1,5 @@
 /** 行程页主逻辑：加载、渲染、Tab 切换、勾选保存、分享、编辑。 */
-import { getTrip, saveTrip } from './api.js';
+import { getTrip, saveTrip, uploadImage } from './api.js';
 import { RECENT_KEY } from './config.js';
 import {
   renderHero, renderSections, renderChecklistPanel, renderPackingPanel, esc
@@ -270,6 +270,13 @@ function wireChecklist() {
       queueSave();
     });
   });
+  // 预定清单条目的「📎 附件」（完成人 / 说明 / 图片凭证）
+  $$('#mpanel-booking .todo .attach-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const it = findItem(btn.closest('.todo').dataset.id);
+      if (it) openAttachModal(it);
+    });
+  });
 }
 
 // ---- 花销弹窗 ----
@@ -304,6 +311,85 @@ function initExpenseModal() {
     closeExpModal();
     renderExpense();
     queueSave();
+  });
+}
+
+// ---- 预定清单「附件」弹窗（完成人 / 文字说明 / 图片凭证）----
+let attachItem = null;       // 当前编辑的清单条目
+let attachPreview = null;    // 预览图（已存 URL 或新 dataURL）；null 表示无图
+let attachIsNew = false;     // 预览是否为待上传的新图
+
+function openLightbox(src) { $('#lightboxImg').src = src; $('#lightbox').classList.add('open'); }
+
+// 用 canvas 压缩图片，回调返回 base64 dataURL
+function downscale(file, cb, maxDim = 1000, quality = 0.7) {
+  const img = new Image(), reader = new FileReader();
+  reader.onload = () => {
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      if (w > maxDim || h > maxDim) { const s = maxDim / Math.max(w, h); w = Math.round(w * s); h = Math.round(h * s); }
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      cb(c.toDataURL('image/jpeg', quality));
+    };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function renderAttachPreview() {
+  const p = $('#mPreview');
+  if (!attachPreview) { p.innerHTML = ''; return; }
+  p.innerHTML = `<img src="${attachPreview}" alt="预览"><br><span class="rm">✕ 移除图片</span>`;
+  p.querySelector('img').addEventListener('click', () => openLightbox(attachPreview));
+  p.querySelector('.rm').addEventListener('click', () => { attachPreview = null; attachIsNew = false; renderAttachPreview(); });
+}
+
+function openAttachModal(item) {
+  attachItem = item;
+  attachPreview = item.img || null;
+  attachIsNew = false;
+  $('#mTitle').textContent = item.name || '附件';
+  $('#mMeta').textContent = item.meta || '';
+  $('#mWho').value = item.who || '';
+  $('#mNote').value = item.note || '';
+  $('#mFile').value = '';
+  renderAttachPreview();
+  $('#attachModal').classList.add('open');
+}
+function closeAttachModal() { $('#attachModal').classList.remove('open'); }
+
+function initAttachModal() {
+  $('#mDrop').addEventListener('click', () => $('#mFile').click());
+  $('#mFile').addEventListener('change', e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    downscale(f, dataUrl => { attachPreview = dataUrl; attachIsNew = true; renderAttachPreview(); });
+  });
+  $('#mCancel').addEventListener('click', closeAttachModal);
+  $('#attachModal').addEventListener('click', e => { if (e.target.id === 'attachModal') closeAttachModal(); });
+  $('#lightbox').addEventListener('click', () => $('#lightbox').classList.remove('open'));
+  $('#mSave').addEventListener('click', async () => {
+    if (!attachItem) return;
+    const btn = $('#mSave'); const old = btn.textContent;
+    btn.disabled = true; btn.textContent = '保存中…';
+    try {
+      const it = attachItem;
+      let img = it.img || '';
+      if (attachPreview === null) img = '';                             // 移除了图片
+      else if (attachIsNew) img = await uploadImage(it.id, attachPreview); // 新图上传
+      it.who = $('#mWho').value;
+      it.note = $('#mNote').value;
+      it.img = img;
+      closeAttachModal();
+      $('#mpanel-booking').innerHTML = renderChecklistPanel(trip);
+      wireChecklist();
+      queueSave();
+    } catch (e) {
+      alert('保存失败：' + e.message + '\n请检查网络后重试。');
+    } finally {
+      btn.disabled = false; btn.textContent = old;
+    }
   });
 }
 
@@ -381,6 +467,7 @@ async function init() {
   initTemplateSwitch();
   initEditor(onEditorSave);
   initExpenseModal();
+  initAttachModal();
   showOverlay('加载行程中…');
   try {
     trip = await getTrip(tripId);
