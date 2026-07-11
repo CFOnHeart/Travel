@@ -5,6 +5,7 @@ import {
   renderHero, renderSections, renderChecklistPanel, renderPackingPanel, esc
 } from './render.js';
 import { initEditor, setEditorData } from './editor.js';
+import { initChat } from './chat.js';
 
 const PANELS = ['trip', 'booking', 'packing', 'expense'];
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
@@ -215,16 +216,29 @@ function buildBoard(people, expenses) {
 }
 
 // ---- Tab 切换 ----
+function switchTab(tab) {
+  $$('.main-tab').forEach(b => b.classList.toggle('active', b.dataset.mtab === tab));
+  PANELS.forEach(p => $('#mpanel-' + p).classList.toggle('active', p === tab));
+}
+
 function initTabs() {
   $$('.main-tab').forEach(btn => {
     btn.addEventListener('click', () => {
-      const tab = btn.dataset.mtab;
-      $$('.main-tab').forEach(b => b.classList.toggle('active', b === btn));
-      PANELS.forEach(p =>
-        $('#mpanel-' + p).classList.toggle('active', p === tab));
+      switchTab(btn.dataset.mtab);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
   });
+}
+
+// ---- 助手更新：无刷新应用并保存 ----
+function applyChatUpdate(updatedTrip, focus) {
+  trip = updatedTrip;
+  applyTemplate(trip.meta && trip.meta.template);
+  setEditorData(trip);
+  renderAll();
+  rememberRecent();
+  if (focus) switchTab(focus);
+  queueSave();
 }
 
 // ---- 勾选 / 完成人 ----
@@ -376,6 +390,7 @@ async function init() {
     setEditorData(trip);
     renderAll();
     rememberRecent();
+    initChat({ tripId, getTrip: () => trip, applyUpdate: applyChatUpdate });
   } catch (e) {
     $('#tripRoot').innerHTML = `<div class="home-wrap"><div class="gen-card"><h2 style="color:#c0561f;">加载失败</h2><p>${e.message}</p><p><a class="tool-btn" href="index.html">返回首页</a></p></div></div>`;
   } finally {

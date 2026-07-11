@@ -29,3 +29,14 @@ export async function saveTrip(tripId, trip) {
   if (!resp.ok) throw new Error(data.error || `保存失败（${resp.status}）`);
   return data;
 }
+
+export async function chatTrip(tripId, trip, messages) {
+  const resp = await fetch(`${API_BASE}/trips/${encodeURIComponent(tripId)}/chat`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ trip, messages })
+  });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(data.error || `助手出错（${resp.status}）`);
+  return data; // { reply, updatedTrip, focus }
+}

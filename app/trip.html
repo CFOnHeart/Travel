@@ -79,6 +79,24 @@
     </div>
   </aside>
 
+  <!-- 机器人聊天助手 -->
+  <button class="chat-fab" id="chatFab" type="button" title="AI 行程助手" aria-label="AI 行程助手">🤖</button>
+  <div class="chat-mask" id="chatMask"></div>
+  <aside class="chat-panel" id="chatPanel" aria-hidden="true">
+    <div class="chat-head">
+      <div class="chat-title">
+        <b>🤖 行程助手</b>
+        <span class="chat-sub">增删改查行程 / 清单 / 物品 / 花销</span>
+      </div>
+      <button class="chat-close" id="chatClose" type="button" aria-label="关闭">×</button>
+    </div>
+    <div class="chat-msgs" id="chatMsgs"></div>
+    <div class="chat-inputbar">
+      <textarea id="chatText" rows="1" placeholder="例如：把泸沽湖那笔花销改成 600 / 加一项防晒霜到出行物品 / 删掉返程机票预定项"></textarea>
+      <button class="chat-send" id="chatSend" type="button">发送</button>
+    </div>
+  </aside>
+
   <script type="module" src="js/trip.js"></script>
 </body>
 </html>

@@ -134,18 +134,15 @@ JSON 顶层结构：
 - 全部使用简体中文。
 `;
 
-async function callOpenAI(text) {
+async function callOpenAIMessages(messages, maxTokens) {
   if (!AOAI_ENDPOINT || !AOAI_DEPLOYMENT || !AOAI_API_KEY) {
     throw new Error('AOAI 配置缺失（AOAI_ENDPOINT / AOAI_DEPLOYMENT / AOAI_API_KEY）');
   }
   const url = `${AOAI_ENDPOINT.replace(/\/$/, '')}/openai/deployments/${AOAI_DEPLOYMENT}/chat/completions?api-version=${AOAI_API_VERSION}`;
   const body = {
-    messages: [
-      { role: 'system', content: SCHEMA_DOC },
-      { role: 'user', content: text }
-    ],
+    messages,
     response_format: { type: 'json_object' },
-    max_completion_tokens: 8000
+    max_completion_tokens: maxTokens || 8000
   };
   const resp = await fetch(url, {
     method: 'POST',
@@ -160,6 +157,13 @@ async function callOpenAI(text) {
   const content = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
   if (!content) throw new Error('OpenAI 返回为空');
   return JSON.parse(content);
+}
+
+async function callOpenAI(text) {
+  return callOpenAIMessages([
+    { role: 'system', content: SCHEMA_DOC },
+    { role: 'user', content: text }
+  ]);
 }
 
 // 给每个 checklist / packing item 补一个稳定 id（前端勾选用）
@@ -243,5 +247,90 @@ app.http('putTrip', {
       updatedAt: new Date().toISOString()
     }, 'Merge');
     return { jsonBody: { ok: true } };
+  }
+});
+
+// ---- POST /api/trips/{tripId}/chat ----
+function chatSystem(trip) {
+  return `你是「行程助手」，帮助用户用自然语言修改一份旅行行程。下面是当前行程的完整 JSON（含所有 id）：
+${JSON.stringify(trip)}
+
+行程结构说明：
+- meta: { title, subtitle, dateLabel, emoji[], template }
+- sections[]: 行程内容块，type ∈ flight|hotel|car|timeline|costTable|note
+- checklist[]: 预定清单分组 { group, icon, items:[{id,name,meta,done,who}] }
+- packing[]: 出行物品分组 { group, icon, items:[{id,name,meta}] }
+- people[]: 花销同行人 [{id,name}]
+- expenses[]: 花销 [{id,personId,amount,note,time}]
+
+你可以帮用户对以上任意部分做「增、删、改、查」。
+
+输出必须是严格 JSON（不要 markdown，不要多余文字）：
+{
+  "reply": "给用户的中文回复",
+  "updatedTrip": <修改后的完整行程 JSON> 或 null,
+  "focus": "trip" | "booking" | "packing" | "expense" | null
+}
+
+规则：
+- 「查」类问题（询问、汇总、统计）只回答 reply，updatedTrip=null，focus=null。
+- 需要修改时，返回**完整**的 updatedTrip（保留所有未改动字段和所有 id，不要丢数据）；新增条目请生成新的字符串 id。
+- **删除必须二次确认**：用户第一次要求删除时不要执行，reply 中复述要删除的内容并询问「确认删除吗？」，updatedTrip=null；只有当用户在随后消息中明确确认（如「确认」「是的」「删吧」）时，才返回执行删除后的 updatedTrip。
+- 每次有修改时，focus 设为对应面板（行程=trip、预定清单=booking、出行物品=packing、花销=expense），并在 reply 末尾用一句话提示去哪个标签查看，例如「👉 请在「💰 花销」标签查看」。
+- 花销的 personId 必须对应 people 中已存在的人；用户提到的人不存在时可先在 people 新增。
+- 金额用数字；chip.kind 只能是 default|cost|stay|car；badge.warn=true 表示提醒类。
+- 全部使用简体中文。`;
+}
+
+app.http('chatTrip', {
+  methods: ['POST'], authLevel: 'anonymous', route: 'trips/{tripId}/chat',
+  handler: async (req) => {
+    const id = req.params.tripId;
+    if (!id) return { status: 400, jsonBody: { error: 'missing tripId' } };
+    let b;
+    try { b = await req.json(); } catch { return { status: 400, jsonBody: { error: 'invalid json' } }; }
+    const trip = b && b.trip;
+    const history = Array.isArray(b && b.messages) ? b.messages : [];
+    if (!trip || typeof trip !== 'object') return { status: 400, jsonBody: { error: 'missing trip' } };
+    if (!history.length) return { status: 400, jsonBody: { error: 'missing messages' } };
+
+    try {
+      await checkRateLimit(clientIp(req));
+    } catch (e) {
+      if (e instanceof RateLimitError) return { status: 429, jsonBody: { error: e.message } };
+    }
+
+    const messages = [
+      { role: 'system', content: chatSystem(trip) },
+      ...history.slice(-16).map(m => ({
+        role: m.role === 'assistant' ? 'assistant' : 'user',
+        content: String(m.content || '').slice(0, 4000)
+      }))
+    ];
+
+    let out;
+    try {
+      out = await callOpenAIMessages(messages);
+    } catch (e) {
+      return { status: 502, jsonBody: { error: '助手出错：' + e.message } };
+    }
+
+    const reply = (out && out.reply) ? String(out.reply) : '（助手暂时没有回复，请重试）';
+    let updatedTrip = out && out.updatedTrip;
+    if (updatedTrip && typeof updatedTrip === 'object') {
+      updatedTrip = ensureIds(updatedTrip);
+      // 持久化
+      const c = client(); await ensureTable(c);
+      await c.upsertEntity({
+        partitionKey: PK, rowKey: id,
+        data: JSON.stringify(updatedTrip).slice(0, 60000),
+        updatedAt: new Date().toISOString()
+      }, 'Merge');
+    } else {
+      updatedTrip = null;
+    }
+    const focus = out && ['trip', 'booking', 'packing', 'expense'].includes(out.focus) ? out.focus : null;
+
+    return { jsonBody: { reply, updatedTrip, focus } };
   }
 });
