@@ -11,6 +11,43 @@
   --shadow: 0 8px 30px rgba(14, 122, 95, .10);
   --sidebar-w: 320px;
 }
+
+/* ============ 多模板主题（覆盖品牌色 + Hero 渐变）============ */
+body.tpl-ocean {
+  --primary: #0b6ea8; --primary-light: #2b9fd8; --accent: #ff7a4d; --accent-2: #ffb066;
+  --bg: #eef5fb; --line: #dbe8f2; --shadow: 0 8px 30px rgba(11,110,168,.10);
+}
+body.tpl-ocean .hero { background: linear-gradient(135deg, #0b6ea8 0%, #2b9fd8 55%, #57c1e8 100%); }
+
+body.tpl-sunset {
+  --primary: #c0562a; --primary-light: #e07a3e; --accent: #e0348a; --accent-2: #ff7eb0;
+  --bg: #fdf4ee; --line: #f0e0d5; --shadow: 0 8px 30px rgba(192,86,42,.10);
+}
+body.tpl-sunset .hero { background: linear-gradient(135deg, #c0562a 0%, #e07a3e 55%, #f0a860 100%); }
+
+body.tpl-minimal {
+  --primary: #334155; --primary-light: #475569; --accent: #6366f1; --accent-2: #818cf8;
+  --bg: #f6f7f9; --line: #e5e8ec; --shadow: 0 6px 22px rgba(30,41,59,.08);
+}
+body.tpl-minimal .hero { background: linear-gradient(135deg, #334155 0%, #475569 60%, #64748b 100%); }
+
+/* ============ 风格切换下拉 ============ */
+.tpl-switch { position: relative; }
+.tpl-menu {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 20;
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.16); padding: 6px; min-width: 160px; display: none;
+}
+.tpl-menu.open { display: block; }
+.tpl-menu button {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  background: none; border: none; border-radius: 8px; padding: 8px 10px; cursor: pointer;
+  font-family: inherit; font-size: .9rem; color: var(--text);
+}
+.tpl-menu button:hover { background: #f1f6f4; }
+.tpl-menu button.active { background: #eafaf4; font-weight: 700; }
+.tpl-menu .sw { width: 18px; height: 18px; border-radius: 6px; flex-shrink: 0; box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
 body {

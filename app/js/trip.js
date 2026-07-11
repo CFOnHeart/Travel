@@ -312,6 +312,33 @@ function initShare() {
   });
 }
 
+// ---- 模板 / 风格切换 ----
+const TEMPLATES = ['resort', 'ocean', 'sunset', 'minimal'];
+
+function applyTemplate(name) {
+  const tpl = TEMPLATES.includes(name) ? name : 'resort';
+  document.body.classList.remove(...TEMPLATES.map(t => 'tpl-' + t));
+  document.body.classList.add('tpl-' + tpl);
+  $$('#tplMenu button').forEach(b => b.classList.toggle('active', b.dataset.tpl === tpl));
+}
+
+function initTemplateSwitch() {
+  const btn = $('#tplBtn'), menu = $('#tplMenu');
+  btn.addEventListener('click', e => { e.stopPropagation(); menu.classList.toggle('open'); });
+  document.addEventListener('click', () => menu.classList.remove('open'));
+  menu.addEventListener('click', e => e.stopPropagation());
+  $$('#tplMenu button').forEach(b => {
+    b.addEventListener('click', () => {
+      const name = b.dataset.tpl;
+      trip.meta = trip.meta || {};
+      trip.meta.template = name;
+      applyTemplate(name);
+      menu.classList.remove('open');
+      queueSave();
+    });
+  });
+}
+
 // ---- 最近访问（本地）----
 function rememberRecent() {
   try {
@@ -326,6 +353,7 @@ function rememberRecent() {
 // ---- 编辑保存 ----
 async function onEditorSave(next) {
   trip = next;
+  applyTemplate(trip.meta && trip.meta.template);
   renderAll();
   rememberRecent();
   showOverlay('保存中…');
@@ -336,6 +364,7 @@ async function init() {
   if (!tripId) { location.replace('index.html'); return; }
   initTabs();
   initShare();
+  initTemplateSwitch();
   initEditor(onEditorSave);
   initExpenseModal();
   showOverlay('加载行程中…');
@@ -343,6 +372,7 @@ async function init() {
     trip = await getTrip(tripId);
     trip.people = trip.people || [];
     trip.expenses = trip.expenses || [];
+    applyTemplate(trip.meta && trip.meta.template);
     setEditorData(trip);
     renderAll();
     rememberRecent();
