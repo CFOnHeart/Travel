@@ -177,3 +177,31 @@ az resource list -g rg-yn-travel -o table
 
 ## 成本
 消费计划 Functions（每月百万次免费额度）+ Standard LRS 存储，低流量下约 **¥0–1/月**。
+> ➕ 新增的前端托管 **App Service B1（`asp-yntravel-web`）是按小时计费的付费规格**（非免费层），约 ¥100+/月，见下方新增功能说明。
+
+---
+
+## 五、行程生成平台（`app/`）与新增功能
+
+除了手写的云南页（`云南/`），仓库新增了一套**数据驱动的多行程平台** `app/`（与云南页完全隔离）：首页输入行程文本 → `trip.html?trip=<ID>` 渲染。
+
+### 新增功能清单
+| 功能 | 说明 | 相关文件 |
+|------|------|---------|
+| 🤖 AI 行程助手 | 右下角机器人按钮 → 右侧聊天框，用自然语言对行程/清单/物品/花销增删改查；**删除二次确认**；思考时 loading 旋转；完成后无刷新自动更新并提示去哪个标签查看 | `app/js/chat.js`、`api/src/functions/trips.js`（`/chat`） |
+| 云南行程导入平台 | 手写云南数据已转成平台 Schema，存为 trip **`yunnan2026`** | — |
+| 预定清单附件 | 平台清单补齐与云南页一致的**📎 附件**（完成人 / 文字说明 / 图片凭证，图片经 `/api/upload` 存 Blob） | `app/js/render.js`、`app/js/trip.js`、`app/js/api.js` |
+| 🎨 多模板风格 | resort/ocean/sunset/minimal 四套，右上角切换，云端持久化 | `app/js/trip.js` |
+| 💰 花销时间轴看板 | 动态人员、纵轴时间、悬停累计 | `app/js/trip.js` |
+| ⭐ 收藏路由 | 干净 URL `/app/trip-collections?trip=<ID>`（App Service 上目录方式实现） | `app/trip-collections/index.html` |
+
+### 平台后端（多租户，与云南单租户隔离）
+- `api/src/functions/trips.js`：`POST /api/trips/generate`、`GET /api/trips/{id}`、`PUT /api/trips/{id}/save`（upsert，可指定 id）、`POST /api/trips/{id}/chat`。
+- 存储：Table `trips`（`PartitionKey="trip"`，`RowKey=tripId`，整份 Schema 存 `data` 字段）；Table `ratelimit` 限流。
+- Azure OpenAI（生成 + 聊天）：配置在 Function App 应用设置 `AOAI_ENDPOINT / AOAI_DEPLOYMENT / AOAI_API_KEY / AOAI_API_VERSION`（密钥不落前端）。
+
+### 前端托管（两处）
+- **GitHub Pages**：<https://cfonheart.github.io/Travel/>
+- **Azure App Service B1**（国内可访问）：<https://yntravel-site-ue8266.azurewebsites.net>（详见 [docs/azure-resources.md](docs/azure-resources.md)）
+
+> ⚠️ **改前端 JS 后的缓存**：浏览器会缓存 ES 模块（`&v=` 只刷 HTML，不刷 `./xxx.js` 嵌套 import）。回访用户需**硬刷新 Ctrl+F5**；新访客不受影响。

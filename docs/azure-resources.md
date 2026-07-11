@@ -1,6 +1,6 @@
 # 后端 Azure 资源说明
 
-本项目后端由一组 Azure 资源组成，全部位于 **East Asia**，属于个人订阅
+本项目的 Azure 资源（**后端** Functions + Storage，以及**前端托管** App Service）全部位于 **East Asia**，属于个人订阅
 **Visual Studio Enterprise Subscription**（`765e1ed7-a890-4d1d-86a3-a7116c7c7250`）。
 
 > 一键创建/更新请用 skill：[`/provision-travel-backend`](../.github/skills/provision-travel-backend/SKILL.md)
@@ -17,7 +17,11 @@
 | 4 | Table | `.../storageAccounts/tableServices/tables` | `expenses` | — | 花销记录（首次调用自动创建） |
 | 5 | Blob 容器 | `.../storageAccounts/blobServices/containers` | `proofs` | 公开只读（blob） | 图片凭证（首次上传自动创建） |
 | 6 | 函数应用 | `Microsoft.Web/sites` (kind `functionapp,linux`) | `func-yntravel-ue8266` | Linux · **消费计划** · Node 22 · Functions v4 | 承载 API |
-| 7 | 消费计划 | `Microsoft.Web/serverfarms` | 自动生成（`ASP-*`） | Dynamic (Y1) | Functions 的按量计费宿主 |
+| 7 | 消费计划 | `Microsoft.Web/serverfarms` | `EastAsiaLinuxDynamicPlan` | Dynamic (Y1) | Functions 的按量计费宿主 |
+| 8 | Table | `.../storageAccounts/tableServices/tables` | `trips` | — | 多租户「行程生成平台」的整份行程 Schema（首次调用自动创建） |
+| 9 | Table | `.../storageAccounts/tableServices/tables` | `ratelimit` | — | 生成/聊天接口的限流计数（首次调用自动创建） |
+| 10 | App Service 计划 | `Microsoft.Web/serverfarms` | `asp-yntravel-web` | **Linux · B1（付费）** | 托管前端静态站的计算宿主 |
+| 11 | Web App | `Microsoft.Web/sites` (kind `app,linux`) | `yntravel-site-ue8266` | PHP 8.2（nginx）· 仅 HTTPS | **前端静态托管**（国内可访问，绕开 github.io 被重置） |
 
 > `ue8266` 是创建时生成的 6 位随机后缀，保证存储账户名与函数应用名全局唯一。
 > 在新环境部署会生成新的后缀（见 skill）。
@@ -36,6 +40,27 @@
 ### CORS 允许来源
 - `https://cfonheart.github.io`（GitHub Pages 前端）
 - `http://localhost:3000`（本地开发）
+- `https://yntravel-site-ue8266.azurewebsites.net` / `http://...`（Azure App Service 前端）
+
+### 前端托管 App Service（B1）
+为解决 `github.io` 在中国大陆常被连接重置（`ERR_CONNECTION_RESET`），前端另外托管到 App Service（`azurewebsites.net` 国内可访问性更好）。
+
+> ⚠️ App Service 的 **PHP 8.2 Linux 镜像用 nginx（非 Apache），不读 `.htaccess`**。干净路由（如 `/app/trip-collections`）用「目录 + `index.html` + `<base href="/app/">`」实现，而非 rewrite。
+
+```powershell
+# B1 Linux 计划 + PHP 静态托管 Web App
+az appservice plan create -n asp-yntravel-web -g rg-yn-travel -l eastasia --is-linux --sku B1
+az webapp create -n yntravel-site-ue8266 -g rg-yn-travel -p asp-yntravel-web --runtime "PHP:8.2"
+az webapp update -n yntravel-site-ue8266 -g rg-yn-travel --https-only true
+az functionapp cors add -n func-yntravel-ue8266 -g rg-yn-travel `
+  --allowed-origins "https://yntravel-site-ue8266.azurewebsites.net" "http://yntravel-site-ue8266.azurewebsites.net"
+
+# 部署前端（打包 index.html + app + 云南 → zip）。
+# 用 .NET ZipFile 而非 Compress-Archive，避免漏掉 .htaccess 等 dotfile。
+az webapp deploy -n yntravel-site-ue8266 -g rg-yn-travel --src-path .deploy-site.zip --type zip
+```
+
+线上地址：<https://yntravel-site-ue8266.azurewebsites.net>（`/` 跳云南页；`/app/trip-collections/?trip=<ID>` 为收藏路由）。
 
 ### 存储账户
 - `--allow-blob-public-access true`：让 `proofs` 容器里的图片能通过 URL 直接访问。
