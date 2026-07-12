@@ -115,6 +115,19 @@ function displaySrc(photo) {
   return photo.displayUrl || photo.url;
 }
 
+function originalSrc(photo) {
+  return photo.originalUrl || photo.url || photo.displayUrl;
+}
+
+function downloadName(photo, size) {
+  const base = String(photo.caption || photo.destination || photo.id || 'travel-photo')
+    .trim()
+    .replace(/[\\/:*?"<>|]+/g, '-')
+    .replace(/\s+/g, '-')
+    .slice(0, 80) || 'travel-photo';
+  return `${base}-${size}.jpg`;
+}
+
 function sphereItems(photos) {
   const selected = photos.slice(0, 12);
   return selected.map((photo, index) => `
@@ -417,25 +430,74 @@ export function initPhotos(ctx) {
   }
 
   function openLightbox(photo) {
+    const photos = filteredPhotos();
+    let index = Math.max(0, photos.findIndex(item => item.id === photo.id));
     const overlay = document.createElement('div');
     overlay.className = 'photo-lightbox open';
     overlay.innerHTML = `
-      <div class="photo-lightbox-stage"><img src="${esc(displaySrc(photo))}" alt="${esc(photo.caption || '')}" decoding="async"></div>
+      <div class="photo-lightbox-stage">
+        <button class="photo-nav photo-prev" type="button" aria-label="上一张">‹</button>
+        <img src="" alt="" decoding="async">
+        <button class="photo-nav photo-next" type="button" aria-label="下一张">›</button>
+      </div>
       <aside class="photo-lightbox-info">
         <button class="photo-close" type="button">×</button>
-        <span>${esc(photo.destination || '旅行照片')} ${fmtDate(photo.uploadedAt)}</span>
-        <h3>${esc(photo.caption || '未命名照片')}</h3>
-        <p>${esc(scopeLabel(trip(), photo))}</p>
+        <span data-photo-kicker></span>
+        <h3 data-photo-title></h3>
+        <p data-photo-scope></p>
+        <div class="photo-lightbox-count" data-photo-count></div>
+        <div class="photo-downloads">
+          <a class="tool-btn" data-download-display href="#">下载当前尺寸</a>
+          <a class="tool-btn" data-download-original href="#">下载原图</a>
+        </div>
         <button class="tool-btn" type="button" data-edit>编辑信息</button>
         <button class="tool-btn danger" type="button" data-delete>删除照片</button>
       </aside>`;
     document.body.appendChild(overlay);
-    overlay.querySelector('.photo-close').addEventListener('click', () => overlay.remove());
-    overlay.addEventListener('click', event => { if (event.target === overlay) overlay.remove(); });
-    overlay.querySelector('[data-edit]').addEventListener('click', () => { overlay.remove(); openPhotoModal(photo.scope, scopeLabel(trip(), photo), photo); });
-    overlay.querySelector('[data-delete]').addEventListener('click', async () => {
-      trip().photos = photoList(trip()).filter(item => item.id !== photo.id);
+
+    const current = () => photos[index] || photo;
+    const render = () => {
+      const active = current();
+      const image = overlay.querySelector('.photo-lightbox-stage img');
+      image.src = displaySrc(active);
+      image.alt = active.caption || '';
+      overlay.querySelector('[data-photo-kicker]').textContent = `${active.destination || '旅行照片'} ${fmtDate(active.uploadedAt)}`;
+      overlay.querySelector('[data-photo-title]').textContent = active.caption || '未命名照片';
+      overlay.querySelector('[data-photo-scope]').textContent = scopeLabel(trip(), active);
+      overlay.querySelector('[data-photo-count]').textContent = `${index + 1} / ${photos.length || 1}`;
+      const displayLink = overlay.querySelector('[data-download-display]');
+      displayLink.href = displaySrc(active);
+      displayLink.download = downloadName(active, 'display');
+      const originalLink = overlay.querySelector('[data-download-original]');
+      originalLink.href = originalSrc(active);
+      originalLink.download = downloadName(active, 'original');
+    };
+    const go = delta => {
+      if (!photos.length) return;
+      index = (index + delta + photos.length) % photos.length;
+      render();
+    };
+    const close = () => {
+      document.removeEventListener('keydown', onKeydown);
       overlay.remove();
+    };
+    const onKeydown = event => {
+      if (event.key === 'ArrowLeft') { event.preventDefault(); go(-1); }
+      if (event.key === 'ArrowRight') { event.preventDefault(); go(1); }
+      if (event.key === 'Escape') close();
+    };
+
+    render();
+    document.addEventListener('keydown', onKeydown);
+    overlay.querySelector('.photo-close').addEventListener('click', close);
+    overlay.querySelector('.photo-prev').addEventListener('click', () => go(-1));
+    overlay.querySelector('.photo-next').addEventListener('click', () => go(1));
+    overlay.addEventListener('click', event => { if (event.target === overlay) close(); });
+    overlay.querySelector('[data-edit]').addEventListener('click', () => { const active = current(); close(); openPhotoModal(active.scope, scopeLabel(trip(), active), active); });
+    overlay.querySelector('[data-delete]').addEventListener('click', async () => {
+      const active = current();
+      trip().photos = photoList(trip()).filter(item => item.id !== active.id);
+      close();
       ctx.render();
       await ctx.save();
     });
