@@ -3,6 +3,7 @@ const { BlobServiceClient } = require('@azure/storage-blob');
 
 const conn = process.env.AzureWebJobsStorage;
 const CONTAINER = 'proofs';
+const CACHE_CONTROL = 'public, max-age=31536000, immutable';
 
 // POST /api/upload  body: { id, dataUrl: "data:image/jpeg;base64,..." } -> { url }
 app.http('upload', {
@@ -29,8 +30,8 @@ app.http('upload', {
     const safeId = (b.id ? String(b.id) : 'img').replace(/[^a-z0-9-]/gi, '');
     const name = `${safeId}-${Date.now()}.${ext}`;
     const blob = container.getBlockBlobClient(name);
-    await blob.uploadData(buffer, { blobHTTPHeaders: { blobContentType: contentType } });
+    await blob.uploadData(buffer, { blobHTTPHeaders: { blobContentType: contentType, blobCacheControl: CACHE_CONTROL } });
 
-    return { jsonBody: { url: blob.url } };
+    return { jsonBody: { url: blob.url, bytes: buffer.length } };
   }
 });

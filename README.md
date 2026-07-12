@@ -202,8 +202,9 @@ az resource list -g rg-yn-travel -o table
   ```js
   {
     id: 'ph_xxx',
-    url: 'https://...jpg',
-    thumbUrl: 'https://...jpg',
+    url: 'https://...display.jpg',
+    displayUrl: 'https://...display.jpg',
+    thumbUrl: 'https://...thumb.jpg',
     caption: '蓝月谷水面很漂亮',
     destination: '丽江',
     scope: { type: 'timelineItem', sectionId: '...', childId: '...', itemId: '...' },
@@ -215,6 +216,7 @@ az resource list -g rg-yn-travel -o table
   - 照片墙 Tab 顶部「上传照片」默认关联整个行程。
   - destination section 和 timeline item 内的「＋ 照片」会自动带入当前 section / item 作为关联对象。
 - 展示：
+  - 上传时生成 `thumbUrl` 与 `displayUrl` 两档图片，并在 Blob 上设置长期缓存；照片墙和照片球只加载缩略图，Lightbox 才加载展示图。
   - 左侧主体为仿真照片墙：最多随机展示 9 张，支持图钉/胶带、轻墙面纹理、随机角度与大小、「重新排布」。
   - 右侧桌面端为 Three.js + CSS3DRenderer 照片球：最多展示 12 张，自动旋转，支持鼠标拖拽，跟「全部 / 各目的地」筛选联动。
   - 移动端隐藏右侧照片球，仅保留照片墙主体。

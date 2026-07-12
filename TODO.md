@@ -23,7 +23,7 @@
 4. **封面机制**：支持 `isCover` 或 `coverPhotoId`，只在用户设置封面后显示大图 hero。
 5. **Section 胶卷**：destination / timeline item 下展示横向照片胶卷预览。
 6. **AI tool 化**：新增 `photo.add/update/delete/link/setCover` tool，继续走聊天确认卡片。
-7. **真实缩略图**：服务端生成缩略图，减少照片墙和 3D 球体加载原图的成本。
+7. **服务端缩略图**：当前已用前端 Canvas 生成 `thumbUrl` / `displayUrl` 两档图片；如后续照片量变大，可改为服务端生成缩略图，减少客户端处理压力。
 8. **3D 模式降级**：Three.js CDN 失败时保留当前 DOM sphere fallback，并在 UI 上弱提示。
 
 ---

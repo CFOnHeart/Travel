@@ -107,11 +107,19 @@ function mountClass(index) {
   return index % 3 === 1 ? ' taped tape-left' : index % 3 === 2 ? ' taped tape-right' : ' pinned';
 }
 
+function thumbSrc(photo) {
+  return photo.thumbUrl || photo.displayUrl || photo.url;
+}
+
+function displaySrc(photo) {
+  return photo.displayUrl || photo.url;
+}
+
 function sphereItems(photos) {
   const selected = photos.slice(0, 12);
   return selected.map((photo, index) => `
     <button class="photo-sphere-item" type="button" data-photo-id="${esc(photo.id)}" data-sphere-index="${index}">
-      <img src="${esc(photo.url)}" alt="${esc(photo.caption || '旅行照片')}">
+      <img src="${esc(thumbSrc(photo))}" alt="${esc(photo.caption || '旅行照片')}" loading="lazy" decoding="async">
     </button>`).join('');
 }
 
@@ -124,7 +132,7 @@ export function renderPhotosPanel(trip) {
   const chips = ['全部', ...dests].map((name, index) => `<button class="photo-filter${index ? '' : ' active'}" type="button" data-destination="${index ? esc(name) : ''}">${esc(name)}</button>`).join('');
   const cards = wallPhotos.map((photo, index) => `
     <button class="photo-tile photo-pin ${mountClass(index)}${photoRatioClass(photo, index)}" type="button" data-photo-id="${esc(photo.id)}" style="${wallStyle(WALL_SLOTS[index], index)}">
-      <img src="${esc(photo.url)}" alt="${esc(photo.caption || '旅行照片')}">
+      <img src="${esc(thumbSrc(photo))}" alt="${esc(photo.caption || '旅行照片')}" loading="lazy" decoding="async">
       <span class="photo-tile-meta"><b>${esc(photo.destination || '行程')}</b>${photo.caption ? `<small>${esc(photo.caption)}</small>` : ''}</span>
     </button>`).join('');
 
@@ -238,7 +246,7 @@ export function initPhotos(ctx) {
       element.type = 'button';
       element.className = 'photo-sphere-card';
       element.dataset.photoId = photo.id;
-      element.innerHTML = `<img src="${esc(photo.thumbUrl || photo.url)}" alt="${esc(photo.caption || '旅行照片')}">`;
+      element.innerHTML = `<img src="${esc(thumbSrc(photo))}" alt="${esc(photo.caption || '旅行照片')}" loading="lazy" decoding="async">`;
       element.addEventListener('click', event => {
         event.stopPropagation();
         const current = photoList(trip()).find(item => item.id === photo.id);
@@ -347,7 +355,7 @@ export function initPhotos(ctx) {
     $('#photoCaption').value = photo ? (photo.caption || '') : '';
     $('#photoFile').value = '';
     fillSelects(photo);
-    renderPreview(photo ? photo.url : '');
+    renderPreview(photo ? displaySrc(photo) : '');
     $('#photoModal').classList.add('open');
   }
 
@@ -387,9 +395,15 @@ export function initPhotos(ctx) {
       list.unshift(photo);
     }
     if (selectedDataUrl) {
-      const url = await uploadImage(photo.id, selectedDataUrl);
-      photo.url = url;
-      photo.thumbUrl = url;
+      const thumbDataUrl = selectedDataUrl.thumb || selectedDataUrl.display || selectedDataUrl;
+      const displayDataUrl = selectedDataUrl.display || selectedDataUrl.thumb || selectedDataUrl;
+      const [thumbUrl, displayUrl] = await Promise.all([
+        uploadImage(`${photo.id}-thumb`, thumbDataUrl),
+        uploadImage(`${photo.id}-display`, displayDataUrl)
+      ]);
+      photo.thumbUrl = thumbUrl;
+      photo.displayUrl = displayUrl;
+      photo.url = displayUrl;
     }
     if (!photo.url) throw new Error('请先选择照片');
     photo.caption = caption;
@@ -406,7 +420,7 @@ export function initPhotos(ctx) {
     const overlay = document.createElement('div');
     overlay.className = 'photo-lightbox open';
     overlay.innerHTML = `
-      <div class="photo-lightbox-stage"><img src="${esc(photo.url)}" alt="${esc(photo.caption || '')}"></div>
+      <div class="photo-lightbox-stage"><img src="${esc(displaySrc(photo))}" alt="${esc(photo.caption || '')}" decoding="async"></div>
       <aside class="photo-lightbox-info">
         <button class="photo-close" type="button">×</button>
         <span>${esc(photo.destination || '旅行照片')} ${fmtDate(photo.uploadedAt)}</span>
@@ -468,6 +482,13 @@ export function initPhotos(ctx) {
     }
   });
 
+  document.addEventListener('error', event => {
+    const img = event.target;
+    if (!(img instanceof HTMLImageElement) || !img.closest('.photo-wall-board, [data-photo-sphere], .photo-lightbox')) return;
+    const holder = img.closest('button, .photo-lightbox-stage');
+    if (holder) holder.classList.add('photo-load-failed');
+  }, true);
+
   function beginSphereDrag(event, moveName, upName) {
     const sphere = event.target.closest('[data-photo-sphere]');
     if (sphere && sphere.classList.contains('three-ready')) return;
@@ -506,7 +527,12 @@ export function initPhotos(ctx) {
   $('#photoFile')?.addEventListener('change', event => {
     const file = event.target.files[0];
     if (!file) return;
-    downscale(file, dataUrl => { selectedDataUrl = dataUrl; renderPreview(dataUrl); });
+    downscale(file, thumb => {
+      downscale(file, display => {
+        selectedDataUrl = { thumb, display };
+        renderPreview(display);
+      }, 1600, 0.78);
+    }, 640, 0.72);
   });
   $('#photoCancel')?.addEventListener('click', closePhotoModal);
   $('#photoModal')?.addEventListener('click', event => { if (event.target.id === 'photoModal') closePhotoModal(); });

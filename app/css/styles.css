@@ -533,6 +533,23 @@ footer { text-align: center; color: var(--muted); font-size: .84rem; padding: 26
   pointer-events: none;
 }
 .photo-sphere-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo-load-failed { background: linear-gradient(135deg, rgba(255,255,255,.9), rgba(238,231,219,.78)); }
+.photo-load-failed img { opacity: .18; }
+.photo-tile.photo-load-failed::after,
+.photo-sphere-item.photo-load-failed::after,
+.photo-sphere-card.photo-load-failed::after,
+.photo-lightbox-stage.photo-load-failed::after {
+  content: '图片加载失败';
+  position: absolute;
+  inset: auto 10px 10px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(255,255,255,.82);
+  color: rgba(68,58,46,.72);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
 .photo-sphere::after {
   content: ""; position: absolute; left: 50%; top: 50%; width: 260px; height: 260px;
   transform: translate(-50%, -50%); border-radius: 50%;
