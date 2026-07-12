@@ -36,12 +36,14 @@
       <button class="main-tab" type="button" data-mtab="booking">📋 预定清单</button>
       <button class="main-tab" type="button" data-mtab="packing">🎒 出行物品</button>
       <button class="main-tab" type="button" data-mtab="expense">💰 花销</button>
+      <button class="main-tab" type="button" data-mtab="photos">🖼️ 照片墙</button>
     </nav>
 
     <main class="wrap main-panel active" id="mpanel-trip"></main>
     <section class="wrap main-panel" id="mpanel-booking"></section>
     <section class="wrap main-panel" id="mpanel-packing"></section>
     <section class="wrap main-panel" id="mpanel-expense"></section>
+    <section class="wrap main-panel" id="mpanel-photos"></section>
 
     <footer>🌿 由行程生成平台创建 · 具体价格与航班请以实时预订为准</footer>
   </div>
@@ -106,6 +108,28 @@
 
   <!-- 图片放大 -->
   <div class="lightbox" id="lightbox"><img id="lightboxImg" src="" alt=""></div>
+
+  <!-- 照片墙上传 / 编辑弹窗 -->
+  <div class="modal-mask" id="photoModal">
+    <div class="modal photo-modal">
+      <h3 id="photoModalTitle">添加照片</h3>
+      <div class="m-meta" id="photoScopeText"></div>
+      <label>照片</label>
+      <div class="file-drop" id="photoDrop">选择照片</div>
+      <input type="file" id="photoFile" accept="image/*" hidden>
+      <div class="preview-img" id="photoPreview"></div>
+      <label>说明</label>
+      <input type="text" id="photoCaption" placeholder="例如：蓝月谷水面很漂亮">
+      <label>目的地</label>
+      <select id="photoDestination"></select>
+      <label>关联对象</label>
+      <select id="photoScope"></select>
+      <div class="modal-actions">
+        <button class="btn ghost" id="photoCancel" type="button" style="background:#eef3f1;color:#3a5850;">取消</button>
+        <button class="btn primary" id="photoSave" type="button" style="background:var(--primary);color:#fff;">保存</button>
+      </div>
+    </div>
+  </div>
 
   <!-- 机器人聊天助手 -->
   <button class="chat-fab" id="chatFab" type="button" title="AI 行程助手" aria-label="AI 行程助手">🤖</button>

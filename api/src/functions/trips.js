@@ -614,6 +614,8 @@ function ensureIds(trip) {
   const stamp = () => 'i' + (Date.now().toString(36)) + (n++).toString(36);
   (trip.checklist || []).forEach(g => (g.items || []).forEach(it => { if (!it.id) it.id = stamp(); if (typeof it.done !== 'boolean') it.done = false; if (typeof it.who !== 'string') it.who = ''; }));
   (trip.packing || []).forEach(g => (g.items || []).forEach(it => { if (!it.id) it.id = stamp(); }));
+  trip.photos = Array.isArray(trip.photos) ? trip.photos : [];
+  (trip.photos || []).forEach(photo => { if (!photo.id) photo.id = stamp(); });
   (trip.sections || []).forEach(section => {
     if (!section.id) section.id = stamp();
     (section.children || []).forEach(child => {

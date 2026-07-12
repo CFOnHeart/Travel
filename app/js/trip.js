@@ -6,8 +6,9 @@ import {
 } from './render.js';
 import { initEditor, setEditorData } from './editor.js';
 import { initChat } from './chat.js';
+import { initPhotos, renderPhotosPanel } from './photos.js';
 
-const PANELS = ['trip', 'booking', 'packing', 'expense'];
+const PANELS = ['trip', 'booking', 'packing', 'expense', 'photos'];
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -31,6 +32,7 @@ function renderAll() {
   $('#mpanel-booking').innerHTML = renderChecklistPanel(trip);
   $('#mpanel-packing').innerHTML = renderPackingPanel(trip);
   renderExpense();
+  $('#mpanel-photos').innerHTML = renderPhotosPanel(trip);
   document.title = (trip.meta && trip.meta.title) || '我的行程';
   wireChecklist();
 }
@@ -473,11 +475,17 @@ async function init() {
     trip = await getTrip(tripId);
     trip.people = trip.people || [];
     trip.expenses = trip.expenses || [];
+    trip.photos = trip.photos || [];
     applyTemplate(trip.meta && trip.meta.template);
     setEditorData(trip);
     renderAll();
     rememberRecent();
     initChat({ tripId, getTrip: () => trip, applyUpdate: applyChatUpdate });
+    initPhotos({
+      getTrip: () => trip,
+      render: renderAll,
+      save: async () => { await saveTrip(tripId, trip); rememberRecent(); }
+    });
   } catch (e) {
     $('#tripRoot').innerHTML = `<div class="home-wrap"><div class="gen-card"><h2 style="color:#c0561f;">加载失败</h2><p>${e.message}</p><p><a class="tool-btn" href="index.html">返回首页</a></p></div></div>`;
   } finally {

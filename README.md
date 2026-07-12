@@ -193,10 +193,37 @@ az resource list -g rg-yn-travel -o table
 | 预定清单附件 | 平台清单补齐与云南页一致的**📎 附件**（完成人 / 文字说明 / 图片凭证，图片经 `/api/upload` 存 Blob） | `app/js/render.js`、`app/js/trip.js`、`app/js/api.js` |
 | 🎨 多模板风格 | resort/ocean/sunset/minimal 四套，右上角切换，云端持久化 | `app/js/trip.js` |
 | 💰 花销时间轴看板 | 动态人员、纵轴时间、悬停累计 | `app/js/trip.js` |
+| 🖼️ 照片墙 MVP | 新增照片墙 Tab；支持全局上传、按 destination / timeline item 自动关联、照片墙展示、Lightbox 查看与编辑 caption/destination/关联对象；右侧桌面端 Three.js/CSS3D 旋转照片球与筛选联动 | `app/js/photos.js`、`app/js/trip.js`、`app/js/render.js`、`app/css/styles.css` |
 | ⭐ 收藏路由 | 干净 URL `/app/trip-collections?trip=<ID>`（App Service 上目录方式实现） | `app/trip-collections/index.html` |
 
+### 照片墙设计与数据
+- 照片元数据暂存在 trip JSON 的 `photos` 数组里，图片文件复用现有 `/api/upload` 上传到 Blob 容器 `proofs`。当前 MVP 不单独建照片 Table。
+- `photos[]` 典型结构：
+  ```js
+  {
+    id: 'ph_xxx',
+    url: 'https://...jpg',
+    thumbUrl: 'https://...jpg',
+    caption: '蓝月谷水面很漂亮',
+    destination: '丽江',
+    scope: { type: 'timelineItem', sectionId: '...', childId: '...', itemId: '...' },
+    uploadedAt: '2026-07-12T12:00:00.000Z',
+    updatedAt: '2026-07-12T12:00:00.000Z'
+  }
+  ```
+- 上传入口：
+  - 照片墙 Tab 顶部「上传照片」默认关联整个行程。
+  - destination section 和 timeline item 内的「＋ 照片」会自动带入当前 section / item 作为关联对象。
+- 展示：
+  - 左侧主体为仿真照片墙：最多随机展示 9 张，支持图钉/胶带、轻墙面纹理、随机角度与大小、「重新排布」。
+  - 右侧桌面端为 Three.js + CSS3DRenderer 照片球：最多展示 12 张，自动旋转，支持鼠标拖拽，跟「全部 / 各目的地」筛选联动。
+  - 移动端隐藏右侧照片球，仅保留照片墙主体。
+- Lightbox：点击照片可查看大图，并可编辑 caption、destination、关联对象，或删除照片元数据。
+- 边界：MVP 不做 AI 自动识图、人脸识别、自动地理定位；删除照片当前只删除 trip 元数据，不删除 Blob 中的原图。
+
 ### 平台后端（多租户，与云南单租户隔离）
-- `api/src/functions/trips.js`：`POST /api/trips/generate`、`GET /api/trips/{id}`、`PUT /api/trips/{id}/save`（upsert，可指定 id）、`POST /api/trips/{id}/chat`。
+- `api/src/functions/trips.js`：`POST /api/trips/generate`、`GET /api/trips/{id}`、`PUT /api/trips/{id}/save`（upsert，可指定 id）、`POST /api/trips/{id}/chat`、`POST /api/trips/{id}/tools/execute`。
+- `api/src/functions/upload.js`：照片墙、清单附件等图片上传入口，当前上传到 Blob 容器 `proofs`。
 - 存储：Table `trips`（`PartitionKey="trip"`，`RowKey=tripId`，整份 Schema 存 `data` 字段）；Table `ratelimit` 限流。
 - Azure OpenAI（生成 + 聊天）：配置在 Function App 应用设置 `AOAI_ENDPOINT / AOAI_DEPLOYMENT / AOAI_API_KEY / AOAI_API_VERSION`（密钥不落前端）。
 

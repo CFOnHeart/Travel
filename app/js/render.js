@@ -92,11 +92,12 @@ function chip(c) {
 
 function renderTimeline(s) {
   const items = (s.items || []).map(it => `
-    <div class="tl-item">
+    <div class="tl-item" data-photo-scope="timelineItem" data-child-id="${esc(s.id || '')}" data-item-id="${esc(it.id || '')}">
       ${it.day ? `<div class="day">${esc(it.day)}</div>` : ''}
       ${it.heading ? `<h5>${esc(it.heading)}</h5>` : ''}
       ${it.desc ? `<p>${esc(it.desc)}</p>` : ''}
       ${Array.isArray(it.chips) && it.chips.length ? `<div class="meta-row">${it.chips.map(chip).join('')}</div>` : ''}
+      <button class="photo-inline-btn" type="button" data-photo-add data-scope-type="timelineItem" data-child-id="${esc(s.id || '')}" data-item-id="${esc(it.id || '')}" data-label="${esc([it.day, it.heading].filter(Boolean).join(' · '))}">＋ 照片</button>
     </div>`).join('');
   return `<div class="timeline">${items}</div>`;
 }
@@ -147,7 +148,10 @@ function renderDestination(s) {
         ${fn(child)}
       </div>`;
   }).join('');
-  return `<div class="destination-card">${intro}${blocks}</div>`;
+  return `<div class="destination-card" data-section-id="${esc(s.id || '')}" data-destination="${esc(s.destination || s.title || '')}">
+    <div class="destination-actions"><button class="photo-inline-btn" type="button" data-photo-add data-scope-type="destination" data-section-id="${esc(s.id || '')}" data-label="${esc(s.title || s.destination || '')}">＋ 照片</button></div>
+    ${intro}${blocks}
+  </div>`;
 }
 
 const SECTION_RENDERERS = {

@@ -274,7 +274,9 @@ export function normalizeSections(sections) {
 
 export function normalizeTripStructure(trip) {
   if (!trip || typeof trip !== 'object') return trip;
-  return { ...trip, sections: normalizeSections(trip.sections || []) };
+  const next = { ...trip, sections: normalizeSections(trip.sections || []) };
+  next.photos = Array.isArray(next.photos) ? next.photos : [];
+  return next;
 }
 
 export const CHAT_STRUCTURE_GUARD = `结构定位规则：当前行程 sections 使用 destination 分组，并且必须保持时间顺序。同一地点如果非连续出现，可以有多个 destination，例如「丽江 → 泸沽湖 → 丽江 → 返程」必须拆成四段，不要把两段丽江合并后打乱 7/21、7/22、7/24 的顺序。修改行程前必须先判断用户提到的目的地、日期和主题；新增当地游玩安排时，必须加入匹配时间阶段的 destination.children 中 kind="itinerary" 或标题含「行程」的 timeline.items。若不存在该 timeline 就在匹配 destination.children 下新建 {type:"timeline", kind:"itinerary", title:"行程具体安排", items:[]}。「丽江」和「泸沽湖」是两个不同 destination：泸沽湖环湖/住宿/前往泸沽湖相关日程放泸沽湖，玉龙雪山/丽江古镇放第一段丽江，束河/丽江机场还车放第二段丽江，飞回上海放「返程」。每个 destination 应有 kind="arrival" 且 title="抵达方式" 的 note；租车取车放第一段丽江，还车放第二段丽江。例如「西双版纳帮我添加一个7/20下午去植物园的行程」必须加入西双版纳 destination 的行程具体安排，不能加入丽江或泸沽湖。返回完整 updatedTrip，并保留未改字段。`;

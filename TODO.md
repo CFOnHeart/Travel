@@ -4,6 +4,30 @@
 
 ---
 
+## 照片墙后续增强
+
+**状态：** MVP 已实现，后续增强（Backlog）
+**记录日期：** 2026-07-12
+
+### 已有 MVP
+- `app/` 动态行程页新增 `🖼️ 照片墙` Tab。
+- 支持全局上传照片，也支持在 destination / timeline item 上下文上传并自动关联。
+- 照片元数据暂存 trip JSON 的 `photos[]`，图片复用 `/api/upload` 存 Blob。
+- 左侧为最多 9 张随机照片的仿真照片墙；右侧桌面端为 Three.js + CSS3DRenderer 旋转照片球。
+- 支持 Lightbox 查看、编辑 caption/destination/关联对象、删除照片元数据。
+
+### 后续建议
+1. **独立照片表**：照片数量变多后，将 `photos[]` 从 trip JSON 拆到 Table `tripPhotos`，`PartitionKey=tripId`、`RowKey=photoId`。
+2. **Blob 清理**：增加删除照片时同步删除 Blob 的 API，避免只删元数据导致存储残留。
+3. **批量上传**：上传控件支持一次选择多张，批量填写 destination / scope。
+4. **封面机制**：支持 `isCover` 或 `coverPhotoId`，只在用户设置封面后显示大图 hero。
+5. **Section 胶卷**：destination / timeline item 下展示横向照片胶卷预览。
+6. **AI tool 化**：新增 `photo.add/update/delete/link/setCover` tool，继续走聊天确认卡片。
+7. **真实缩略图**：服务端生成缩略图，减少照片墙和 3D 球体加载原图的成本。
+8. **3D 模式降级**：Three.js CDN 失败时保留当前 DOM sphere fallback，并在 UI 上弱提示。
+
+---
+
 ## 结构级差异化模板（Structure-level Templates）
 
 **状态：** 待开发（Backlog）
