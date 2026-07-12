@@ -438,28 +438,37 @@ footer { text-align: center; color: var(--muted); font-size: .84rem; padding: 26
 }
 .photo-pin {
   position: absolute; left: var(--x); top: var(--y); width: var(--w);
-  margin: 0; padding: 9px 9px 28px; border-radius: 4px; overflow: visible;
-  background: #fff; box-shadow: 0 18px 34px rgba(0,0,0,.18), 0 2px 1px rgba(0,0,0,.05);
+  margin: 0; padding: 12px 10px 28px; border-radius: 4px; overflow: visible;
+  background: linear-gradient(180deg, #fff 0%, #fbfbfd 72%, #f1f1f4 100%);
+  box-shadow: 0 18px 34px rgba(0,0,0,.18), 0 2px 1px rgba(0,0,0,.05);
   transform: rotate(var(--r)) scale(var(--s)); transform-origin: center; z-index: var(--z);
   transition: transform .28s ease, box-shadow .28s ease, z-index .1s;
 }
+.photo-pin.pin-0 { --pin-x: 50%; --pin-y: 5px; --pin-a: -2deg; --pin-c1: #ff5a52; --pin-c2: #bc141e; --pin-c3: #7c0911; }
+.photo-pin.pin-1 { --pin-x: 28%; --pin-y: 7px; --pin-a: 9deg; --pin-c1: #34a7ff; --pin-c2: #0066cc; --pin-c3: #003f8a; }
+.photo-pin.pin-2 { --pin-x: 72%; --pin-y: 6px; --pin-a: -10deg; --pin-c1: #ffd858; --pin-c2: #d79a00; --pin-c3: #845900; }
+.photo-pin.pin-3 { --pin-x: 46%; --pin-y: 8px; --pin-a: 5deg; --pin-c1: #30d158; --pin-c2: #168a35; --pin-c3: #0a5820; }
+.photo-pin.pin-4 { --pin-x: 64%; --pin-y: 5px; --pin-a: 12deg; --pin-c1: #b9a7ff; --pin-c2: #6850d8; --pin-c3: #34268e; }
+.photo-pin.pin-5 { --pin-x: 36%; --pin-y: 6px; --pin-a: -8deg; --pin-c1: #6e6e73; --pin-c2: #2d2d31; --pin-c3: #0f0f12; }
 .photo-pin.pinned::before {
-  content: ""; position: absolute; left: 50%; top: 6px; width: 9px; height: 9px;
-  transform: translateX(-50%); border-radius: 50%; background: #d2d2d7;
-  box-shadow: inset 0 1px 1px rgba(255,255,255,.8), 0 1px 3px rgba(0,0,0,.25);
-  z-index: 2;
+  content: ""; position: absolute; left: var(--pin-x); top: var(--pin-y); width: 18px; height: 18px;
+  transform: translate(-50%, -50%) rotate(var(--pin-a)); border-radius: 50%; z-index: 5;
+  background:
+    radial-gradient(circle at 32% 24%, rgba(255,255,255,.96) 0 10%, rgba(255,255,255,.46) 11% 20%, transparent 21%),
+    radial-gradient(circle at 50% 58%, var(--pin-c1) 0 23%, var(--pin-c2) 55%, var(--pin-c3) 100%);
+  border: 1px solid rgba(0,0,0,.22);
+  box-shadow:
+    inset 0 1px 1px rgba(255,255,255,.58),
+    inset 0 -2px 3px rgba(0,0,0,.22),
+    0 2px 2px rgba(0,0,0,.22),
+    5px 7px 8px rgba(0,0,0,.24);
 }
-.photo-pin.taped::before,
-.photo-pin.taped::after {
-  content: ""; position: absolute; top: -11px; width: 58px; height: 22px;
-  background: rgba(255,255,255,.58); border: 1px solid rgba(210,210,215,.7);
-  box-shadow: 0 3px 8px rgba(0,0,0,.08); backdrop-filter: blur(2px);
-  z-index: 3;
+.photo-pin.pinned::after {
+  content: ""; position: absolute; left: calc(var(--pin-x) + 4px); top: calc(var(--pin-y) + 9px); width: 2px; height: 15px;
+  transform: rotate(calc(var(--pin-a) + 8deg)); transform-origin: top center; border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255,255,255,.88), #88888d 32%, #343438 100%);
+  box-shadow: 2px 3px 5px rgba(0,0,0,.24); z-index: 4;
 }
-.photo-pin.tape-left::before { left: 16px; transform: rotate(-8deg); }
-.photo-pin.tape-left::after { right: 16px; transform: rotate(7deg); }
-.photo-pin.tape-right::before { left: 50%; transform: translateX(-50%) rotate(5deg); width: 72px; }
-.photo-pin.tape-right::after { display: none; }
 .photo-pin:hover { transform: rotate(0deg) scale(1.045); box-shadow: 0 28px 55px rgba(0,0,0,.24); z-index: 20; }
 .photo-tile[hidden] { display: none; }
 .photo-tile img { display: block; width: 100%; min-height: 180px; object-fit: cover; transition: transform .35s ease; }

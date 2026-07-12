@@ -104,7 +104,7 @@ function photoRatioClass(photo, index) {
 }
 
 function mountClass(index) {
-  return index % 3 === 1 ? ' taped tape-left' : index % 3 === 2 ? ' taped tape-right' : ' pinned';
+  return ` pinned pin-${index % 6}`;
 }
 
 function thumbSrc(photo) {
