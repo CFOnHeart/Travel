@@ -587,8 +587,7 @@ footer { text-align: center; color: var(--muted); font-size: .84rem; padding: 26
 }
 .photo-lightbox.open { display: grid; }
 .photo-lightbox-stage { display: grid; place-items: center; min-width: 0; padding: 24px; position: relative; }
-.photo-lightbox-stage img { max-width: 100%; max-height: 92vh; border-radius: 18px; box-shadow: 0 18px 60px rgba(0,0,0,.35); transition: opacity .16s ease, filter .16s ease; }
-.photo-lightbox.is-loading .photo-lightbox-stage img { opacity: .34; filter: blur(1.5px); }
+.photo-lightbox-stage img { max-width: 100%; max-height: 92vh; border-radius: 18px; box-shadow: 0 18px 60px rgba(0,0,0,.35); }
 .photo-lightbox-info { background: #111; border-left: 1px solid rgba(255,255,255,.12); padding: 28px 22px; position: relative; }
 .photo-lightbox-info span { color: #a1a1a6; font-size: .8rem; }
 .photo-lightbox-info h3 { font-size: 1.35rem; line-height: 1.2; margin: 10px 0; }

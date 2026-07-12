@@ -437,7 +437,7 @@ export function initPhotos(ctx) {
     overlay.innerHTML = `
       <div class="photo-lightbox-stage">
         <button class="photo-nav photo-prev" type="button" aria-label="上一张">‹</button>
-        <img src="" alt="" decoding="async">
+        <img alt="" decoding="async">
         <div class="photo-loading" aria-live="polite"><span></span><b>照片加载中...</b></div>
         <button class="photo-nav photo-next" type="button" aria-label="下一张">›</button>
       </div>
@@ -471,6 +471,7 @@ export function initPhotos(ctx) {
       const nextSrc = displaySrc(active);
       const token = ++renderToken;
       if (loadingTimer) clearTimeout(loadingTimer);
+      image.closest('.photo-lightbox-stage')?.classList.remove('photo-load-failed');
       setLoading(true);
       overlay.querySelector('[data-photo-kicker]').textContent = `${active.destination || '旅行照片'} ${fmtDate(active.uploadedAt)}`;
       overlay.querySelector('[data-photo-title]').textContent = active.caption || '未命名照片';
@@ -483,16 +484,17 @@ export function initPhotos(ctx) {
       originalLink.href = originalSrc(active);
       originalLink.download = downloadName(active, 'original');
       const loader = new Image();
-      const finish = () => {
+      const finish = failed => {
         if (token !== renderToken) return;
         if (loadingTimer) clearTimeout(loadingTimer);
         image.src = nextSrc;
         image.alt = active.caption || '';
+        image.closest('.photo-lightbox-stage')?.classList.toggle('photo-load-failed', !!failed);
         setLoading(false);
       };
-      loader.onload = finish;
-      loader.onerror = finish;
-      loadingTimer = setTimeout(finish, 8000);
+      loader.onload = () => finish(false);
+      loader.onerror = () => finish(true);
+      loadingTimer = setTimeout(() => finish(true), 8000);
       loader.src = nextSrc;
     };
     const go = delta => {
@@ -511,6 +513,9 @@ export function initPhotos(ctx) {
     };
 
     render();
+    overlay.querySelector('.photo-lightbox-stage img').addEventListener('load', event => {
+      event.currentTarget.closest('.photo-lightbox-stage')?.classList.remove('photo-load-failed');
+    });
     document.addEventListener('keydown', onKeydown);
     overlay.querySelector('.photo-close').addEventListener('click', close);
     overlay.querySelector('.photo-prev').addEventListener('click', () => go(-1));
@@ -569,7 +574,7 @@ export function initPhotos(ctx) {
 
   document.addEventListener('error', event => {
     const img = event.target;
-    if (!(img instanceof HTMLImageElement) || !img.closest('.photo-wall-board, [data-photo-sphere], .photo-lightbox')) return;
+    if (!(img instanceof HTMLImageElement) || !img.currentSrc || !img.closest('.photo-wall-board, [data-photo-sphere], .photo-lightbox')) return;
     const holder = img.closest('button, .photo-lightbox-stage');
     if (holder) holder.classList.add('photo-load-failed');
   }, true);
