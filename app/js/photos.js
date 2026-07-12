@@ -438,6 +438,7 @@ export function initPhotos(ctx) {
       <div class="photo-lightbox-stage">
         <button class="photo-nav photo-prev" type="button" aria-label="上一张">‹</button>
         <img src="" alt="" decoding="async">
+        <div class="photo-loading" aria-live="polite"><span></span><b>照片加载中...</b></div>
         <button class="photo-nav photo-next" type="button" aria-label="下一张">›</button>
       </div>
       <aside class="photo-lightbox-info">
@@ -456,11 +457,21 @@ export function initPhotos(ctx) {
     document.body.appendChild(overlay);
 
     const current = () => photos[index] || photo;
+    let loading = false;
+    let renderToken = 0;
+    let loadingTimer = 0;
+    const setLoading = value => {
+      loading = value;
+      overlay.classList.toggle('is-loading', value);
+      $$('.photo-nav', overlay).forEach(button => { button.disabled = value; });
+    };
     const render = () => {
       const active = current();
       const image = overlay.querySelector('.photo-lightbox-stage img');
-      image.src = displaySrc(active);
-      image.alt = active.caption || '';
+      const nextSrc = displaySrc(active);
+      const token = ++renderToken;
+      if (loadingTimer) clearTimeout(loadingTimer);
+      setLoading(true);
       overlay.querySelector('[data-photo-kicker]').textContent = `${active.destination || '旅行照片'} ${fmtDate(active.uploadedAt)}`;
       overlay.querySelector('[data-photo-title]').textContent = active.caption || '未命名照片';
       overlay.querySelector('[data-photo-scope]').textContent = scopeLabel(trip(), active);
@@ -471,9 +482,21 @@ export function initPhotos(ctx) {
       const originalLink = overlay.querySelector('[data-download-original]');
       originalLink.href = originalSrc(active);
       originalLink.download = downloadName(active, 'original');
+      const loader = new Image();
+      const finish = () => {
+        if (token !== renderToken) return;
+        if (loadingTimer) clearTimeout(loadingTimer);
+        image.src = nextSrc;
+        image.alt = active.caption || '';
+        setLoading(false);
+      };
+      loader.onload = finish;
+      loader.onerror = finish;
+      loadingTimer = setTimeout(finish, 8000);
+      loader.src = nextSrc;
     };
     const go = delta => {
-      if (!photos.length) return;
+      if (!photos.length || loading) return;
       index = (index + delta + photos.length) % photos.length;
       render();
     };
