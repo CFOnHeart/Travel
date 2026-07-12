@@ -88,30 +88,75 @@ JSON 顶层结构：
     "dateLabel": "如：📅 2026年7月17日 — 7月25日 · 9天（无法确定就留空字符串）",
     "emoji": ["与目的地相关的 3-6 个 emoji 装饰，如 🌴 🐘 ⛰️"]
   },
-  "sections": [  // 有序的行程内容块，按时间/逻辑排列，num 从 1 递增
+  "sections": [  // 有序的行程内容块，按时间/逻辑排列，num 从 1 递增。优先按目的地/阶段分组
     { "type": "flight", "num": 1, "title": "去程航班",
       "date": "7月17日", "weekday": "周五", "flightNo": "KY3122",
       "from": { "code": "PVG", "name": "上海浦东", "time": "19:15" },
       "to":   { "code": "JHG", "name": "西双版纳", "time": "当晚" },
       "price": 800, "unit": "/人", "priceLabel": "机票参考价",
       "badges": [ { "text": "✅ 含行李托运", "warn": false } ] },
-    { "type": "hotel", "num": 2, "title": "西双版纳住宿（7/17–7/21 · 4晚）",
-      "name": "温德姆至尊酒店", "stars": "★★★★★ · 豪华大床房",
-      "tags": ["室内恒温泳池", "2024新店"],
-      "price": 475, "priceUnit": "/ 晚", "totalNote": "4晚合计 · 人均 ≈ ¥950",
-      "tip": { "icon": "🩱", "text": "记得带泳衣泳镜！" }, "image": "" },
-    { "type": "car", "num": 4, "title": "机场租车 · 4天自驾", "icon": "🚙",
-      "model": "小鹏 G7（意向车型）", "desc": "7/21 取车 · 7/25 还车",
-      "price": 250, "priceUnit": "/ 天",
-      "tags": ["租期 4 天", "含保险"], "totalNote": "≈ ¥1300 总价", "subNote": "人均 ≈ ¥450" },
-    { "type": "timeline", "num": 5, "title": "详细行程", "items": [
-      { "day": "7/21 周二 · 抵达日", "heading": "玉龙雪山 → 丽江古镇",
-        "desc": "白天玉龙雪山，傍晚逛古镇并入住。",
-        "chips": [ { "text": "🏔️ 玉龙雪山", "kind": "default" }, { "text": "🏨 古镇 ≈¥300/间", "kind": "stay" } ] } ] },
-    { "type": "costTable", "num": 6, "title": "人均费用概览",
+    { "type": "destination", "num": 2, "title": "西双版纳（7/17–7/21）", "destination": "西双版纳",
+      "summary": "热带度假阶段，住宿、出行和每日安排都放在这个目的地下。",
+      "children": [
+        { "type": "hotel", "kind": "lodging", "title": "住宿",
+          "name": "温德姆至尊酒店", "stars": "★★★★★ · 豪华大床房",
+          "tags": ["室内恒温泳池", "2024新店"],
+          "price": 475, "priceUnit": "/ 晚", "totalNote": "4晚合计 · 人均 ≈ ¥950",
+          "tip": { "icon": "🩱", "text": "记得带泳衣泳镜！" }, "image": "" },
+        { "type": "timeline", "kind": "itinerary", "title": "行程具体安排", "items": [
+          { "day": "7/20 周一 · 西双版纳", "heading": "下午安排",
+            "desc": "在西双版纳安排半日游或酒店休整。",
+            "chips": [ { "text": "🌴 西双版纳", "kind": "default" } ] } ] }
+      ] },
+    { "type": "flight", "num": 3, "title": "飞往丽江",
+      "date": "7月21日", "weekday": "周二", "flightNo": "DR5051",
+      "from": { "code": "JHG", "name": "西双版纳", "time": "07:55" },
+      "to":   { "code": "LJG", "name": "丽江", "time": "上午" },
+      "price": 340, "unit": "/人", "priceLabel": "机票参考价",
+      "badges": [ { "text": "含机建燃油", "warn": false }, { "text": "行李托运仅 10kg", "warn": true } ] },
+    { "type": "destination", "num": 4, "title": "丽江（7/21）", "destination": "丽江",
+      "children": [
+        { "type": "note", "kind": "arrival", "title": "抵达方式", "text": "乘飞机抵达：西双版纳 → 丽江（7月21日 周二 · DR5051 · 07:55 → 上午）" },
+        { "type": "car", "kind": "transport", "title": "出行",
+          "model": "小鹏 G7（意向车型）", "desc": "7/21 取车 · 7/25 还车",
+          "price": 250, "priceUnit": "/ 天",
+          "tags": ["租期 4 天", "含保险"], "totalNote": "≈ ¥1300 总价", "subNote": "人均 ≈ ¥450" },
+        { "type": "timeline", "kind": "itinerary", "title": "行程具体安排", "items": [
+          { "day": "7/21 周二 · 抵达日", "heading": "玉龙雪山 → 丽江古镇",
+            "desc": "白天玉龙雪山，傍晚逛古镇并入住。",
+            "chips": [ { "text": "🏔️ 玉龙雪山", "kind": "default" }, { "text": "🏨 古镇 ≈¥300/间", "kind": "stay" } ] } ] }
+      ] },
+    { "type": "destination", "num": 5, "title": "泸沽湖（7/22–7/24）", "destination": "泸沽湖",
+      "children": [
+        { "type": "note", "kind": "arrival", "title": "抵达方式", "text": "自驾抵达：从丽江方向开车前往泸沽湖，车程约 3 小时。" },
+        { "type": "timeline", "kind": "itinerary", "title": "行程具体安排", "items": [
+          { "day": "7/22 周三 · 前往泸沽湖", "heading": "驱车约 3 小时 · 入住湖景酒店",
+            "desc": "开车前往泸沽湖并入住湖景酒店。",
+            "chips": [ { "text": "🚗 车程 ≈3h", "kind": "car" }, { "text": "🏨 湖景酒店", "kind": "stay" } ] } ] }
+      ] },
+    { "type": "destination", "num": 6, "title": "丽江（7/24–7/25）", "destination": "丽江",
+      "children": [
+        { "type": "note", "kind": "arrival", "title": "抵达方式", "text": "自驾抵达：从泸沽湖返回丽江。" },
+        { "type": "timeline", "kind": "itinerary", "title": "行程具体安排", "items": [
+          { "day": "7/24 周五 · 返回丽江", "heading": "开车回丽江 · 随意逛",
+            "desc": "返回丽江，可在束河古镇或机场附近住一晚。",
+            "chips": [ { "text": "🚗 返回丽江", "kind": "car" }, { "text": "🏨 束河古镇 / 机场旁", "kind": "stay" } ] },
+          { "day": "7/25 周六 · 返程前", "heading": "丽江机场还车",
+            "desc": "前往丽江机场办理还车。",
+            "chips": [ { "text": "🚗 机场还车", "kind": "car" } ] } ] }
+      ] },
+    { "type": "destination", "num": 7, "title": "返程", "destination": "返程",
+      "children": [
+        { "type": "note", "kind": "arrival", "title": "抵达方式", "text": "从丽江机场出发，返回上海浦东。" },
+        { "type": "timeline", "kind": "itinerary", "title": "行程具体安排", "items": [
+          { "day": "7/25 周六 · 返程", "heading": "飞回上海浦东",
+            "desc": "乘飞机返回上海浦东，结束云南之旅。",
+            "chips": [ { "text": "✈️ 丽江 → 上海浦东", "kind": "default" } ] } ] }
+      ] },
+    { "type": "costTable", "num": 8, "title": "人均费用概览",
       "rows": [ { "item": "去程机票", "note": "KY3122", "amount": "¥800" } ],
       "total": { "item": "已知合计", "note": "不含餐饮", "amount": "≈ ¥3232" } },
-    { "type": "note", "num": 7, "title": "备注", "text": "一段自由文字说明。" }
+    { "type": "note", "num": 9, "title": "备注", "text": "一段自由文字说明。" }
   ],
   "checklist": [  // 预定清单，按类别分组
     { "group": "交通", "icon": "✈️", "items": [
@@ -129,6 +174,16 @@ JSON 顶层结构：
 - 金额为数字时用 number；表格/合计里的金额可带 ¥ 前缀的字符串。
 - chip.kind 只能是 "default" | "cost" | "stay" | "car"。
 - badge.warn=true 用于「注意/提醒」类（如行李限重）。
+- sections 支持两层结构：顶层可以是 destination；destination.children 里放 hotel/car/flight/timeline/note/costTable。
+- 多目的地行程必须优先使用 destination 分组，并按实际旅行时间顺序排列。每个具体地点单独一个 destination，例如「丽江」和「泸沽湖」要分开，不要合成「丽江 · 泸沽湖」。
+- 同一地点如果在行程中非连续出现，可以出现多个 destination section。例如「丽江 → 泸沽湖 → 丽江」应拆成「丽江」「泸沽湖」「丽江」「返程」，不要把前后两段丽江合并后打乱时间顺序。
+- 每个目的地内按需包含 kind="arrival" 的抵达方式、kind="lodging" 的住宿、kind="transport" 的当地出行、kind="itinerary" 的行程具体安排。不要把某个目的地的日程放到另一个目的地的 timeline 里。
+- 所有 timeline.items 必须按日期和一天内时间顺序排列；sections 的顺序也必须与真实旅行顺序一致。不要为了按城市聚合而打乱时间。
+- destination.destination 只能是一个具体地点或阶段名，例如「西双版纳」「丽江」「泸沽湖」「返程」；不要用「丽江 · 泸沽湖」「东京/大阪」这种混合地点。
+- 顶层 flight/car 等跨阶段信息可以保留用于概览，但目的地内仍要有 kind="arrival" 抵达方式。租车取车放取车所在阶段，还车放还车所在阶段。
+- 如果只有少量用户信息，不要编造过多具体价格/航班/酒店；不确定内容用待定、建议、空字符串或备注表达。
+- 输出前自检：是否有混合地点 destination、是否有时间倒序、是否缺少目的地抵达方式、是否把某地点日程放进其他地点、是否丢失用户明确提到的信息。
+- 只有跨目的地交通、全局费用、全局备注适合放在顶层；单个目的地的住宿、当地交通、游玩安排放进对应 destination.children。
 - sections 至少包含用户提到的航班、住宿、租车、每日行程、费用等；不确定的字段用空字符串或省略，不要编造。
 - checklist 必须覆盖：交通、租车、旅游门票、每天住宿 四类（有内容就填，没有就空数组）。
 - 全部使用简体中文。
@@ -166,12 +221,407 @@ async function callOpenAI(text) {
   ]);
 }
 
+const VALIDATION_DOC = `
+你是旅行行程 JSON 的合规审查器。只输出严格 JSON，不要 markdown，不要解释。
+
+请检查 trip 是否符合以下规则：
+1. 顶层 sections 必须按真实旅行时间顺序排列；每个 timeline.items 也必须按日期/上午下午晚上/时间顺序排列。
+2. 目的地阶段必须清晰：一个 destination 只能代表一个具体地点或阶段，不允许把两个城市/地点混在一起，例如「丽江 · 泸沽湖」不合规。
+3. 如果同一城市在旅途中非连续出现，允许并应该拆成多个 destination section，例如「丽江 → 泸沽湖 → 丽江 → 返程」。
+4. 每个 destination.children 应包含 kind="arrival" 的抵达方式 note；当地住宿用 kind="lodging"，当地出行/租车用 kind="transport"，具体日程用 kind="itinerary" timeline。
+5. 具体日程必须放在对应地点和对应时间阶段中，不能把西双版纳日程放进丽江/泸沽湖，也不能把泸沽湖日程放进丽江。
+6. 租车取车应放在取车所在阶段，还车应放在还车所在阶段；返程航班/火车等可以是单独「返程」destination 或顶层跨城交通。
+7. checklist 必须至少包含交通、租车、旅游门票、每天住宿四类；packing 必须是按类别分组的物品清单。
+8. 不应丢失用户原文中明确提到的航班、住宿、日期、地点、价格、活动。
+9. 不确定的信息不要编造得过细；可用待定、建议、空字符串或备注。
+10. 输出必须能被前端渲染：section.type 只用 destination|flight|hotel|car|timeline|costTable|note；chip.kind 只用 default|cost|stay|car。
+
+返回格式：
+{
+  "ok": true 或 false,
+  "issues": ["简洁列出所有不合规点"],
+  "repairInstructions": "如果 ok=false，给修复器的一段中文指令；如果 ok=true，空字符串"
+}
+`;
+
+const REPAIR_DOC = `
+你是旅行行程 JSON 修复器。只输出修复后的完整 trip JSON，不要 markdown，不要解释。
+
+你会收到：用户原始行程描述、当前 trip JSON、审查器指出的问题。请在保留所有正确信息的前提下修复 JSON。
+修复重点：
+- sections 和 timeline.items 必须按真实旅行时间顺序。
+- 一个 destination 只能代表一个具体地点或阶段；不要混合两个城市/地点。
+- 同一地点非连续出现时拆成多个 destination，例如「丽江 → 泸沽湖 → 丽江 → 返程」。
+- 每个 destination.children 都要有 kind="arrival" 的抵达方式 note，并按 抵达方式 / 住宿 / 出行 / 行程具体安排 排列。
+- 租车取车放取车阶段，还车放还车阶段；返程放「返程」阶段或顶层交通。
+- 不要丢失已有 checklist、packing、people、expenses、id、价格、日期、地点、用户明确内容。
+`;
+
+async function validateGeneratedTrip(originalText, trip) {
+  return callOpenAIMessages([
+    { role: 'system', content: VALIDATION_DOC },
+    { role: 'user', content: JSON.stringify({ originalText, trip }) }
+  ], 2500);
+}
+
+async function repairGeneratedTrip(originalText, trip, validation) {
+  return callOpenAIMessages([
+    { role: 'system', content: REPAIR_DOC },
+    { role: 'user', content: JSON.stringify({ originalText, trip, validation }) }
+  ]);
+}
+
+function deterministicIssues(trip) {
+  const issues = [];
+  if (!trip || typeof trip !== 'object') return ['trip 不是对象'];
+  if (!Array.isArray(trip.sections) || !trip.sections.length) issues.push('sections 为空');
+
+  (trip.sections || []).forEach((section, index) => {
+    if (section && section.type === 'destination') {
+      const name = section.destination || section.title || '';
+      const names = inferDestinations({ name });
+      if (names.length > 1) issues.push(`第 ${index + 1} 个 destination 混合多个地点：${name}`);
+      if (!Array.isArray(section.children)) {
+        issues.push(`第 ${index + 1} 个 destination 缺少 children`);
+        return;
+      }
+      if (!section.children.some(child => child && child.kind === 'arrival')) issues.push(`第 ${index + 1} 个 destination 缺少抵达方式`);
+      if (!section.children.some(child => child && (child.kind === 'itinerary' || child.type === 'timeline'))) issues.push(`第 ${index + 1} 个 destination 缺少行程具体安排`);
+      section.children.forEach(child => {
+        if (child && child.type === 'timeline' && Array.isArray(child.items)) {
+          child.items.forEach(item => {
+            const itemKey = destinationKey(inferDestinations(item));
+            if (itemKey && itemKey !== name && itemKey !== '返程') issues.push(`「${itemKey}」日程疑似放入「${name}」阶段`);
+          });
+        }
+      });
+    }
+  });
+
+  const groups = Array.isArray(trip.checklist) ? trip.checklist.map(g => g && g.group).join('|') : '';
+  ['交通', '租车', '旅游门票', '每天住宿'].forEach(group => { if (!groups.includes(group)) issues.push(`checklist 缺少「${group}」分组`); });
+  if (!Array.isArray(trip.packing)) issues.push('packing 不是数组');
+  return issues;
+}
+
+async function generateValidatedTrip(text) {
+  let trip = ensureIds(await callOpenAI(text));
+  let lastValidation = null;
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    lastValidation = await validateGeneratedTrip(text, trip);
+    const localIssues = deterministicIssues(trip);
+    if (lastValidation && lastValidation.ok === true && !localIssues.length) return trip;
+    if (localIssues.length) {
+      lastValidation = {
+        ok: false,
+        issues: [...(Array.isArray(lastValidation && lastValidation.issues) ? lastValidation.issues : []), ...localIssues],
+        repairInstructions: '修复确定性结构问题：' + localIssues.join('；')
+      };
+    }
+    if (attempt === 3) break;
+    trip = ensureIds(await repairGeneratedTrip(text, trip, lastValidation));
+  }
+
+  const issues = Array.isArray(lastValidation && lastValidation.issues) ? lastValidation.issues.join('；') : '未知结构问题';
+  throw new Error('行程结构合规检查未通过：' + issues);
+}
+
+const DESTINATION_NAMES = ['西双版纳', '丽江', '泸沽湖', '昆明', '大理', '香格里拉', '玉龙雪山'];
+
+function sectionText(section) {
+  return JSON.stringify(section || {});
+}
+
+function inferDestinations(section) {
+  const text = sectionText(section);
+  return DESTINATION_NAMES.filter(name => text.includes(name));
+}
+
+function placeInDestination(section) {
+  if (section.type === 'hotel') return true;
+  if (section.type === 'timeline') return true;
+  if (section.type === 'car' && inferDestinations(section).length) return true;
+  return false;
+}
+
+function destinationKey(names) {
+  if (names.includes('泸沽湖')) return '泸沽湖';
+  if (names.includes('丽江') || names.includes('玉龙雪山')) return '丽江';
+  return names[0] || '';
+}
+
+function childKind(type) {
+  if (type === 'hotel') return 'lodging';
+  if (type === 'car' || type === 'flight') return 'transport';
+  if (type === 'timeline') return 'itinerary';
+  return type || 'note';
+}
+
+function childTitle(section) {
+  if (section.kind === 'arrival') return '抵达方式';
+  if (section.kind === 'lodging' || section.type === 'hotel') return '住宿';
+  if (section.kind === 'transport' || section.type === 'car') return '出行';
+  if (section.kind === 'itinerary' || section.type === 'timeline') return '行程具体安排';
+  return section.title || '补充信息';
+}
+
+function arrivalFromFlight(section) {
+  if (!section || section.type !== 'flight') return null;
+  const toNames = inferDestinations(section.to || {});
+  const key = destinationKey(toNames);
+  if (!key) return null;
+  const from = section.from || {};
+  const to = section.to || {};
+  const date = [section.date, section.weekday].filter(Boolean).join(' ');
+  const time = [from.time, to.time].filter(Boolean).join(' → ');
+  const flight = section.flightNo ? ` · ${section.flightNo}` : '';
+  return {
+    key,
+    text: `乘飞机抵达：${from.name || '出发地'} → ${to.name || key}${date ? `（${date}${flight}${time ? ` · ${time}` : ''}）` : flight ? `（${section.flightNo}）` : ''}`
+  };
+}
+
+function arrivalFromTimelineItem(item, key) {
+  const text = sectionText(item);
+  if (key === '泸沽湖' && /前往泸沽湖|到泸沽湖|抵达泸沽湖/.test(text)) {
+    const duration = text.match(/(?:车程|路程)[^，。；]*约\s*\d+\s*(?:小时|h)/i);
+    return `自驾抵达：从丽江方向开车前往泸沽湖${duration ? `，${duration[0]}` : ''}。`;
+  }
+  if (key === '丽江' && /返回丽江|回丽江/.test(text)) return '自驾抵达：从泸沽湖返回丽江。';
+  if (key === '返程') return '从丽江机场出发，返回上海浦东。';
+  return '';
+}
+
+function upsertArrival(group, text, replace = false) {
+  if (!text) return;
+  if (!Array.isArray(group.children)) group.children = [];
+  let child = group.children.find(section => section && section.kind === 'arrival');
+  if (!child) {
+    child = { type: 'note', kind: 'arrival', title: '抵达方式', text };
+    group.children.unshift(child);
+    return;
+  }
+  child.type = child.type || 'note';
+  child.title = '抵达方式';
+  if (replace || !child.text || child.text === '抵达方式待补充。') child.text = text;
+}
+
+function ensureArrival(group) {
+  if (!Array.isArray(group.children)) group.children = [];
+  if (!group.children.some(section => section && section.kind === 'arrival')) {
+    group.children.unshift({ type: 'note', kind: 'arrival', title: '抵达方式', text: '抵达方式待补充。' });
+  }
+}
+
+function sortDestinationChildren(group) {
+  const order = { arrival: 0, lodging: 1, transport: 2, itinerary: 3 };
+  group.children.sort((a, b) => (order[a.kind] ?? 9) - (order[b.kind] ?? 9));
+}
+
+function itineraryChild(group) {
+  if (!Array.isArray(group.children)) group.children = [];
+  let child = group.children.find(section => section && (section.kind === 'itinerary' || section.type === 'timeline'));
+  if (!child) {
+    child = { type: 'timeline', kind: 'itinerary', title: '行程具体安排', items: [] };
+    group.children.push(child);
+  }
+  if (!Array.isArray(child.items)) child.items = [];
+  child.kind = child.kind || 'itinerary';
+  child.title = childTitle(child);
+  return child;
+}
+
+function lodgingFromTimelineItem(item, key) {
+  const text = sectionText(item);
+  if (key === '泸沽湖' && text.includes('月遥全湖景')) {
+    return {
+      type: 'hotel',
+      kind: 'lodging',
+      title: '住宿',
+      name: '泸沽湖前湖·月遥全湖景度假酒店（普洛码头店）',
+      stars: '高级湖景露台大床房',
+      tags: ['湖景露台', '普洛码头店', '有充电桩'],
+      price: 542,
+      priceUnit: '/ 晚',
+      totalNote: '2晚人均 ≈ ¥542',
+      tip: { icon: '🔌', text: '酒店配有充电桩，适合自驾电车补能。' },
+      image: ''
+    };
+  }
+  if (key === '丽江' && text.includes('丽江古镇') && /入住|住宿/.test(text)) {
+    return { type: 'note', kind: 'lodging', title: '住宿', text: '丽江古镇附近住宿，方便傍晚逛古镇并休息。' };
+  }
+  return null;
+}
+
+function upsertLodging(group, lodging) {
+  if (!lodging) return;
+  if (!Array.isArray(group.children)) group.children = [];
+  const exists = group.children.some(section => section && section.kind === 'lodging');
+  if (!exists) group.children.push(lodging);
+}
+
+function timelineItemKey(item, fallback) {
+  const text = sectionText(item);
+  if (/返程|飞回上海|返回上海|上海浦东/.test(text)) return '返程';
+  return destinationKey(inferDestinations(item)) || fallback || '';
+}
+
+function splitReturnItem(item) {
+  const text = sectionText(item);
+  if (!/返程|飞回上海|返回上海|上海浦东/.test(text) || !/还车|机场/.test(text)) return null;
+  const chips = Array.isArray(item.chips) ? item.chips : [];
+  return {
+    lijiang: {
+      ...item,
+      heading: '丽江机场还车',
+      desc: '前往丽江机场办理还车。',
+      chips: chips.filter(chip => String(chip.text || '').includes('还车') || chip.kind === 'car')
+    },
+    returns: {
+      ...item,
+      heading: '飞回上海浦东',
+      desc: '乘飞机返回上海浦东，结束云南之旅。',
+      chips: chips.filter(chip => String(chip.text || '').includes('上海') || String(chip.text || '').includes('✈'))
+    }
+  };
+}
+
+function normalizeSections(sections) {
+  if (!Array.isArray(sections)) return [];
+
+  const result = [];
+  let lastGroup = null;
+  const defaultArrivals = new Map();
+
+  function addArrival(key, text) {
+    if (key && text && !defaultArrivals.has(key)) defaultArrivals.set(key, text);
+  }
+
+  function groupKey(group) {
+    return group && (group.destination || group.title);
+  }
+
+  function createGroup(key) {
+    const group = { type: 'destination', title: key, destination: key, children: [] };
+    result.push(group);
+    lastGroup = group;
+    upsertArrival(group, defaultArrivals.get(key));
+    return group;
+  }
+
+  function hasItineraryItems(group) {
+    return !!(group && Array.isArray(group.children) && group.children.some(child => (
+      child && (child.kind === 'itinerary' || child.type === 'timeline') && Array.isArray(child.items) && child.items.length
+    )));
+  }
+
+  function reusableEmptyStage(key) {
+    for (let index = result.length - 1; index >= 0; index--) {
+      const section = result[index];
+      if (section && section.type === 'destination' && groupKey(section) === key && !hasItineraryItems(section)) return section;
+    }
+    return null;
+  }
+
+  function getStageGroup(key) {
+    if (lastGroup && groupKey(lastGroup) === key) {
+      if (!Array.isArray(lastGroup.children)) lastGroup.children = [];
+      return lastGroup;
+    }
+    const reusable = reusableEmptyStage(key);
+    if (reusable) {
+      lastGroup = reusable;
+      if (!Array.isArray(reusable.children)) reusable.children = [];
+      return reusable;
+    }
+    return createGroup(key);
+  }
+
+  sections.forEach(section => {
+    if (!section || typeof section !== 'object') return;
+    if (section.type === 'destination') {
+      result.push(section);
+      lastGroup = section;
+      return;
+    }
+
+    const arrival = arrivalFromFlight(section);
+    if (arrival) addArrival(arrival.key, arrival.text);
+
+    const names = inferDestinations(section);
+    const key = destinationKey(names);
+    if (!key || !placeInDestination(section)) {
+      result.push(section);
+      return;
+    }
+
+    if (section.type === 'timeline' && Array.isArray(section.items)) {
+      const fallback = key || groupKey(lastGroup);
+      section.items.forEach(item => {
+        const split = splitReturnItem(item);
+        if (split) {
+          const lijiangGroup = getStageGroup('丽江');
+          upsertArrival(lijiangGroup, arrivalFromTimelineItem(split.lijiang, '丽江'), true);
+          itineraryChild(lijiangGroup).items.push(split.lijiang);
+          const returnGroup = getStageGroup('返程');
+          upsertArrival(returnGroup, arrivalFromTimelineItem(split.returns, '返程'), true);
+          itineraryChild(returnGroup).items.push(split.returns);
+          return;
+        }
+        const itemKey = timelineItemKey(item, fallback);
+        if (!itemKey) return;
+        const group = getStageGroup(itemKey);
+        upsertArrival(group, arrivalFromTimelineItem(item, itemKey), true);
+        upsertLodging(group, lodgingFromTimelineItem(item, itemKey));
+        itineraryChild(group).items.push(item);
+      });
+      return;
+    }
+
+    const { num, ...child } = section;
+    child.kind = child.kind || childKind(child.type);
+    child.title = childTitle(child);
+    getStageGroup(key).children.push(child);
+  });
+
+  result.forEach(section => {
+    if (section && section.type === 'destination' && Array.isArray(section.children)) {
+      const key = groupKey(section);
+      upsertArrival(section, defaultArrivals.get(key));
+      ensureArrival(section);
+      const hasItinerary = section.children.some(child => child && (child.kind === 'itinerary' || child.type === 'timeline'));
+      if (!hasItinerary) section.children.push({ type: 'timeline', kind: 'itinerary', title: '行程具体安排', items: [] });
+      sortDestinationChildren(section);
+    }
+  });
+  result.forEach((section, index) => { section.num = index + 1; });
+  return result;
+}
+
+function normalizeTripStructure(trip) {
+  if (!trip || typeof trip !== 'object') return trip;
+  trip.sections = normalizeSections(trip.sections || []);
+  return trip;
+}
+
 // 给每个 checklist / packing item 补一个稳定 id（前端勾选用）
 function ensureIds(trip) {
+  if (!trip || typeof trip !== 'object') return trip;
+  trip = normalizeTripStructure(trip);
   let n = 0;
   const stamp = () => 'i' + (Date.now().toString(36)) + (n++).toString(36);
   (trip.checklist || []).forEach(g => (g.items || []).forEach(it => { if (!it.id) it.id = stamp(); if (typeof it.done !== 'boolean') it.done = false; if (typeof it.who !== 'string') it.who = ''; }));
   (trip.packing || []).forEach(g => (g.items || []).forEach(it => { if (!it.id) it.id = stamp(); }));
+  (trip.sections || []).forEach(section => {
+    if (!section.id) section.id = stamp();
+    (section.children || []).forEach(child => {
+      if (!child.id) child.id = stamp();
+      (child.items || []).forEach(item => { if (!item.id) item.id = stamp(); });
+    });
+    (section.items || []).forEach(item => { if (!item.id) item.id = stamp(); });
+  });
   return trip;
 }
 
@@ -195,11 +645,10 @@ app.http('generateTrip', {
 
     let trip;
     try {
-      trip = await callOpenAI(text);
+      trip = await generateValidatedTrip(text);
     } catch (e) {
       return { status: 502, jsonBody: { error: '解析失败：' + e.message } };
     }
-    trip = ensureIds(trip);
     trip.version = 1;
 
     const tripId = newTripId();
@@ -223,7 +672,7 @@ app.http('getTrip', {
     const c = client(); await ensureTable(c);
     try {
       const e = await c.getEntity(PK, id);
-      return { jsonBody: { trip: JSON.parse(e.data) } };
+      return { jsonBody: { trip: ensureIds(JSON.parse(e.data)) } };
     } catch {
       return { status: 404, jsonBody: { error: 'not found' } };
     }
@@ -252,12 +701,16 @@ app.http('putTrip', {
 
 // ---- POST /api/trips/{tripId}/chat ----
 function chatSystem(trip) {
+  const nowIso = new Date().toISOString();
   return `你是「行程助手」，帮助用户用自然语言修改一份旅行行程。下面是当前行程的完整 JSON（含所有 id）：
 ${JSON.stringify(trip)}
 
+当前服务器时间：${nowIso}
+
 行程结构说明：
 - meta: { title, subtitle, dateLabel, emoji[], template }
-- sections[]: 行程内容块，type ∈ flight|hotel|car|timeline|costTable|note
+- sections[]: 行程内容块，type ∈ destination|flight|hotel|car|timeline|costTable|note
+- destination section: { type:"destination", title, destination, summary, children:[...] }，children 里通常有 kind="arrival" 的抵达方式、kind="lodging" 的住宿、kind="transport" 的当地出行、kind="itinerary" 的行程具体安排
 - checklist[]: 预定清单分组 { group, icon, items:[{id,name,meta,done,who}] }
 - packing[]: 出行物品分组 { group, icon, items:[{id,name,meta}] }
 - people[]: 花销同行人 [{id,name}]
@@ -269,17 +722,435 @@ ${JSON.stringify(trip)}
 {
   "reply": "给用户的中文回复",
   "updatedTrip": <修改后的完整行程 JSON> 或 null,
-  "focus": "trip" | "booking" | "packing" | "expense" | null
+  "focus": "trip" | "booking" | "packing" | "expense" | null,
+  "toolCalls": [
+    {
+      "action": "collection.item",
+      "title": "修改清单/物品",
+      "message": "请确认分组、名称和说明。",
+      "args": { "operation": "add|update|delete|toggle", "collection": "booking|packing", "itemId": "已有条目 id，可空", "group": "分组", "name": "名称", "meta": "说明", "done": false, "who": "完成人，仅 booking 使用" }
+    },
+    {
+      "action": "expense.item",
+      "title": "修改花销",
+      "message": "时间默认当前时间，说明为空，可在确认前修改。",
+      "args": { "operation": "add|update|delete", "expenseId": "已有花销 id，可空", "personName": "付款人姓名", "amount": 128, "time": "ISO 时间", "note": "说明" }
+    },
+    {
+      "action": "trip.timelineItem",
+      "title": "修改具体行程",
+      "message": "请确认目的地阶段、日期和行程内容。",
+      "args": { "operation": "add|update|delete", "itemId": "已有日程 id，可空", "destination": "目的地", "stageTitle": "阶段标题，可空", "day": "日期标签", "heading": "标题", "desc": "说明", "chips": [] }
+    },
+    {
+      "action": "trip.hotel",
+      "title": "修改住宿",
+      "message": "请确认目的地、酒店名和住宿信息。",
+      "args": { "operation": "upsert|delete", "sectionId": "已有住宿 section id，可空", "destination": "目的地", "stageTitle": "阶段标题，可空", "name": "酒店名", "stars": "房型/星级", "tags": [], "price": "", "priceUnit": "", "totalNote": "", "tipText": "" }
+    }
+  ] 或 []
 }
 
 规则：
 - 「查」类问题（询问、汇总、统计）只回答 reply，updatedTrip=null，focus=null。
-- 需要修改时，返回**完整**的 updatedTrip（保留所有未改动字段和所有 id，不要丢数据）；新增条目请生成新的字符串 id。
-- **删除必须二次确认**：用户第一次要求删除时不要执行，reply 中复述要删除的内容并询问「确认删除吗？」，updatedTrip=null；只有当用户在随后消息中明确确认（如「确认」「是的」「删吧」）时，才返回执行删除后的 updatedTrip。
+- 所有会修改后端数据的操作都必须经过前端弹窗确认：优先返回 toolCalls，updatedTrip=null。不要在 reply 里声称已经执行。
+- 尽量只使用这 4 个通用写工具：collection.item（booking/packing 增删改/勾选）、expense.item（花销增删改）、trip.timelineItem（具体行程增删改）、trip.hotel（住宿增删改）。无法表达时才返回完整 updatedTrip 交给 trip.replace 兜底确认。
+- 如果确实遇到暂未支持的细粒度 tool，可以返回完整 updatedTrip；后端会把它包装成 trip.replace 确认工具，用户确认后才保存。返回 updatedTrip 时必须保留所有未改动字段和所有 id，不要丢数据。
+- 修改 sections 前先判断用户请求的目的地、日期和主题：
+  1. 如果用户提到目的地（如「西双版纳」「丽江」「泸沽湖」），必须优先修改 title/destination/summary/chips/desc 中匹配该目的地的 destination section。
+  2. 新增当地游玩安排时，添加到该 destination.children 中 kind="itinerary" 或 title 含「行程」的 timeline.items，不要添加到其他目的地的 timeline。
+  3. 如果匹配目的地下没有 itinerary timeline，就在该 destination.children 新建 {type:"timeline", kind:"itinerary", title:"行程具体安排", items:[...]}。
+  4. 如果用户提到的目的地不存在，就新建一个 destination section，再在它的 children 里新增行程具体安排；不要借用不相关目的地的 section。
+  5. 只有用户明确说的是跨城市交通、全局费用或全局备注，才修改顶层 flight/costTable/note。
+  6. sections 必须保持时间顺序；如果同一地点分两次出现，就建立两个 destination section。例：「丽江 → 泸沽湖 → 丽江 → 返程」不能合并成一个丽江 section 后再把 7/24 放到 7/22 前面。
+  7. 「丽江」和「泸沽湖」是两个不同目的地，必须分别放在两个 destination；泸沽湖环湖/住宿/前往泸沽湖相关日程放泸沽湖，玉龙雪山/丽江古镇相关日程放第一段丽江，束河/丽江机场还车放第二段丽江，飞回上海放「返程」。
+  8. 修改目的地交通信息时，优先更新该 destination.children 中 kind="arrival" 且 title="抵达方式" 的 note；没有就新建。租车取车放第一段丽江的「出行」，还车放第二段丽江的「行程具体安排」或「出行」。
+- 例：用户说「西双版纳帮我添加一个7/20下午去植物园的行程」，应把条目加入西双版纳 destination 的「行程具体安排」timeline，不能加入「丽江 · 泸沽湖」的 timeline。
+- 删除也必须使用 toolCalls，不要用纯文本追问「确认删除吗？」。第一次删除请求就返回对应 operation="delete" 的 toolCall，填好要删除对象的 id、名称/说明等可读参数；前端会用富文本卡片让用户确认或取消。
+- 删除 toolCall 必须尽量从当前 JSON 中找到精确 id：collection.item 用 itemId，expense.item 用 expenseId，trip.timelineItem 用 itemId，trip.hotel 用 sectionId。args 里也保留 name/heading/group/note 等可读字段，方便确认卡片展示。
+- 如果删除目标有多个相近候选，不要用纯文本询问；请为每个候选分别返回一个 operation="delete" 的 toolCall，并在 message 里写清楚候选名称、所在模块和分组。前端会用多张卡片让用户勾选要执行的删除项。
 - 每次有修改时，focus 设为对应面板（行程=trip、预定清单=booking、出行物品=packing、花销=expense），并在 reply 末尾用一句话提示去哪个标签查看，例如「👉 请在「💰 花销」标签查看」。
 - 花销的 personId 必须对应 people 中已存在的人；用户提到的人不存在时可先在 people 新增。
+- 新增/修改/删除花销必须使用 toolCalls，不要直接修改 updatedTrip.expenses：
+  1. 用户要添加/记录/新增/修改/删除一笔花销时，返回 action="expense.item" 的 toolCall，updatedTrip=null，focus=null。
+  2. amount 和 personName 如果能从用户话里识别就填入；无法识别就留空字符串，让前端确认框要求用户补充。
+  3. time 默认使用当前服务器时间 ${nowIso}；如果用户提供了时间，用用户提供的时间并尽量转成 ISO 字符串。
+  4. note 默认空字符串；如果用户提供了说明，就填入 note。
+  5. toolCall.message 固定写「时间默认当前时间，说明为空，可在确认前修改。」；reply 要告诉用户「我准备添加这笔花销，请在弹窗中确认，也可以修改时间和说明。」
+  6. 所有 toolCall 都必须由前端弹窗确认后再执行；你不能自己假装已经执行。
+- booking 和 packing 的增删改/勾选必须使用 toolCalls，不要直接修改 updatedTrip.checklist/packing：
+  1. 用户说「还需要带/加到出行物品/行李里要有」等，返回 action="collection.item" 且 collection="packing"。
+  2. 用户说「添加预定项/门票/酒店订单/交通清单」等，返回 action="collection.item" 且 collection="booking"。
+  2. group 尽量选择已有 packing 分组；不确定就填「其他」。
+  3. name 填物品名称，例如「太阳眼镜」；meta 填简短说明，例如「户外防晒」，没有就空字符串。
+  4. reply 要告诉用户「我准备添加这个出行物品，请在弹窗中确认，也可以修改分组和说明。」
+- 行程具体安排增删改必须优先使用 action="trip.timelineItem"；住宿/酒店增删改必须优先使用 action="trip.hotel"。
 - 金额用数字；chip.kind 只能是 default|cost|stay|car；badge.warn=true 表示提醒类。
 - 全部使用简体中文。`;
+}
+
+function expenseCount(trip) {
+  return Array.isArray(trip && trip.expenses) ? trip.expenses.length : 0;
+}
+
+function latestUserText(history) {
+  for (let index = history.length - 1; index >= 0; index--) {
+    const msg = history[index];
+    if (msg && msg.role !== 'assistant') return String(msg.content || '');
+  }
+  return '';
+}
+
+function looksLikeExpenseAdd(text) {
+  return /(花销|开支|支出|消费|记一笔|加一笔|添加.*(费用|花费)|花了|付了|付款|买了)/.test(text) && /\d/.test(text);
+}
+
+function hasExpenseTime(text) {
+  return /(现在|当前|刚刚|今天|昨天|前天|上午|中午|下午|晚上|早上|凌晨|\d{1,2}[点:]\d{0,2}|\d{1,2}[\/-]\d{1,2}|\d{1,2}月\d{1,2})/.test(text);
+}
+
+function hasExpenseNote(text) {
+  return /(早餐|午餐|晚餐|夜宵|餐|饭|门票|机票|车票|住宿|酒店|打车|租车|加油|充电|停车|咖啡|奶茶|零食|购物|买|票|药|水|说明|备注|因为|用于|支付|付款)/.test(text);
+}
+
+function isExpenseDefaultConfirmation(text) {
+  return /(确认|继续|就这样|不用填|不填|无需|不用备注|说明为空|按当前时间|按现在|可以创建|创建吧|记上吧)/.test(text);
+}
+
+function shouldBlockSparseExpenseAdd(originalTrip, updatedTrip, history) {
+  if (!updatedTrip || expenseCount(updatedTrip) <= expenseCount(originalTrip)) return false;
+  const text = latestUserText(history);
+  if (!looksLikeExpenseAdd(text)) return false;
+  if (isExpenseDefaultConfirmation(text)) return false;
+  return !hasExpenseTime(text) && !hasExpenseNote(text);
+}
+
+function normalizeToolCalls(value) {
+  return Array.isArray(value) ? value.filter(call => call && typeof call === 'object') : [];
+}
+
+function compactText(value) {
+  return String(value || '').toLowerCase().replace(/[\s·/／&（）()「」『』【】\-—_]/g, '');
+}
+
+function itemNameTokens(item) {
+  return [item && item.name, item && item.meta]
+    .filter(Boolean)
+    .flatMap(text => String(text).split(/[\s·/／&（）()「」『』【】\-—_]+/))
+    .map(compactText)
+    .filter(text => text.length >= 2);
+}
+
+function collectionDeleteToolCallsFromText(trip, text) {
+  const raw = String(text || '');
+  if (!/(不要|不需要|不用|删除|删掉|移除|去掉|拿掉|取消带|别带)/.test(raw)) return [];
+  const normalized = compactText(raw);
+  const pools = [];
+  if (/(带|行李|出行|物品|packing)/i.test(raw)) pools.push({ collection: 'packing', groups: trip.packing || [], title: '删除出行物品' });
+  if (/(预定|清单|门票|订单|booking)/i.test(raw)) pools.push({ collection: 'booking', groups: trip.checklist || [], title: '删除预定项' });
+  if (!pools.length) pools.push({ collection: 'packing', groups: trip.packing || [], title: '删除出行物品' }, { collection: 'booking', groups: trip.checklist || [], title: '删除预定项' });
+
+  const calls = [];
+  pools.forEach(pool => (pool.groups || []).forEach(group => (group.items || []).forEach(item => {
+    const name = item && item.name;
+    if (!name || !item.id) return;
+    const compactName = compactText(name);
+    const tokens = itemNameTokens(item);
+    const hit = normalized.includes(compactName) || tokens.some(token => normalized.includes(token));
+    if (!hit) return;
+    calls.push({
+      action: 'collection.item',
+      title: pool.title,
+      message: `候选：${group.group || '未分组'} / ${name}`,
+      args: {
+        operation: 'delete',
+        collection: pool.collection,
+        itemId: item.id,
+        group: group.group || '',
+        name,
+        meta: item.meta || '',
+        done: !!item.done,
+        who: item.who || ''
+      }
+    });
+  })));
+
+  const unique = new Map();
+  calls.forEach(call => unique.set(`${call.args.collection}:${call.args.itemId}`, call));
+  return Array.from(unique.values());
+}
+
+function findPersonByName(trip, name) {
+  const people = Array.isArray(trip.people) ? trip.people : [];
+  const clean = String(name || '').trim();
+  if (!clean) return null;
+  return people.find(person => person && person.name === clean) || null;
+}
+
+function parseToolTime(value) {
+  const raw = String(value || '').trim();
+  const date = raw ? new Date(raw) : new Date();
+  if (Number.isNaN(date.getTime())) throw new Error('时间格式无效');
+  return date.toISOString();
+}
+
+function executeExpenseAdd(trip, args = {}) {
+  const amount = Number(args.amount);
+  if (!Number.isFinite(amount) || amount <= 0) throw new Error('金额必须是大于 0 的数字');
+  const personName = String(args.personName || '').trim();
+  const person = findPersonByName(trip, personName);
+  if (!person) throw new Error(personName ? `找不到付款人「${personName}」` : '请选择付款人');
+
+  trip.expenses = Array.isArray(trip.expenses) ? trip.expenses : [];
+  const note = String(args.note || '').trim().slice(0, 200);
+  const time = parseToolTime(args.time);
+  trip.expenses.push({
+    id: newTripId(),
+    personId: person.id,
+    amount,
+    note,
+    time
+  });
+  return { message: `已添加花销：${person.name} ¥${amount}${note ? `，${note}` : ''}。`, focus: 'expense' };
+}
+
+function executeExpenseItem(trip, args = {}) {
+  const op = String(args.operation || 'add');
+  trip.expenses = Array.isArray(trip.expenses) ? trip.expenses : [];
+  if (op === 'add') return executeExpenseAdd(trip, args);
+  const expense = trip.expenses.find(item => item && item.id === args.expenseId);
+  if (!expense) throw new Error('找不到要修改的花销');
+  if (op === 'delete') {
+    trip.expenses = trip.expenses.filter(item => item.id !== args.expenseId);
+    return { message: '已删除花销。', focus: 'expense' };
+  }
+  if (op !== 'update') throw new Error(`不支持的花销操作：${op}`);
+  if (args.amount !== undefined && args.amount !== '') {
+    const amount = Number(args.amount);
+    if (!Number.isFinite(amount) || amount <= 0) throw new Error('金额必须是大于 0 的数字');
+    expense.amount = amount;
+  }
+  if (args.personName !== undefined) {
+    const person = findPersonByName(trip, args.personName);
+    if (!person) throw new Error(`找不到付款人「${args.personName || ''}」`);
+    expense.personId = person.id;
+  }
+  if (args.time !== undefined && args.time !== '') expense.time = parseToolTime(args.time);
+  if (args.note !== undefined) expense.note = String(args.note || '').trim().slice(0, 200);
+  return { message: '已更新花销。', focus: 'expense' };
+}
+
+function collectionList(trip, collection) {
+  if (collection === 'booking') {
+    trip.checklist = Array.isArray(trip.checklist) ? trip.checklist : [];
+    return trip.checklist;
+  }
+  if (collection === 'packing') {
+    trip.packing = Array.isArray(trip.packing) ? trip.packing : [];
+    return trip.packing;
+  }
+  throw new Error('collection 必须是 booking 或 packing');
+}
+
+function findOrCreateCollectionGroup(trip, collection, groupName) {
+  const list = collectionList(trip, collection);
+  const clean = String(groupName || '').trim() || '其他';
+  let group = list.find(item => item && item.group === clean);
+  if (!group) group = list.find(item => item && item.group && (item.group.includes(clean) || clean.includes(item.group)));
+  if (!group) {
+    group = { group: clean, icon: collection === 'booking' ? '📌' : '🎒', items: [] };
+    list.push(group);
+  }
+  if (!Array.isArray(group.items)) group.items = [];
+  return group;
+}
+
+function findCollectionItem(trip, collection, itemId) {
+  for (const group of collectionList(trip, collection)) {
+    const item = (group.items || []).find(entry => entry && entry.id === itemId);
+    if (item) return { group, item };
+  }
+  return null;
+}
+
+function executeCollectionItem(trip, args = {}) {
+  const collection = args.collection;
+  const op = String(args.operation || 'add');
+  const focus = collection === 'booking' ? 'booking' : 'packing';
+  if (op === 'add') {
+    const name = String(args.name || '').trim();
+    if (!name) throw new Error('名称不能为空');
+    const group = findOrCreateCollectionGroup(trip, collection, args.group);
+    const item = { id: newTripId(), name, meta: String(args.meta || '').trim().slice(0, 160), done: !!args.done };
+    if (collection === 'booking') item.who = String(args.who || '').trim();
+    group.items.push(item);
+    return { message: `已添加${collection === 'booking' ? '预定项' : '出行物品'}：${name}。`, focus };
+  }
+  const found = findCollectionItem(trip, collection, args.itemId);
+  if (!found) throw new Error('找不到要修改的条目');
+  if (op === 'delete') {
+    found.group.items = found.group.items.filter(item => item.id !== args.itemId);
+    return { message: '已删除条目。', focus };
+  }
+  if (op === 'toggle') {
+    found.item.done = args.done === undefined ? !found.item.done : !!args.done;
+    return { message: '已更新完成状态。', focus };
+  }
+  if (op !== 'update') throw new Error(`不支持的集合操作：${op}`);
+  if (args.group && args.group !== found.group.group) {
+    found.group.items = found.group.items.filter(item => item.id !== args.itemId);
+    findOrCreateCollectionGroup(trip, collection, args.group).items.push(found.item);
+  }
+  if (args.name !== undefined) found.item.name = String(args.name || '').trim();
+  if (!found.item.name) throw new Error('名称不能为空');
+  if (args.meta !== undefined) found.item.meta = String(args.meta || '').trim().slice(0, 160);
+  if (args.done !== undefined) found.item.done = !!args.done;
+  if (collection === 'booking' && args.who !== undefined) found.item.who = String(args.who || '').trim();
+  return { message: '已更新条目。', focus };
+}
+
+function findOrCreatePackingGroup(trip, groupName) {
+  trip.packing = Array.isArray(trip.packing) ? trip.packing : [];
+  const clean = String(groupName || '').trim() || '其他';
+  let group = trip.packing.find(item => item && item.group === clean);
+  if (!group) group = trip.packing.find(item => item && item.group && (item.group.includes(clean) || clean.includes(item.group)));
+  if (!group) {
+    group = { group: clean, icon: '🎒', items: [] };
+    trip.packing.push(group);
+  }
+  if (!Array.isArray(group.items)) group.items = [];
+  return group;
+}
+
+function executePackingAddItem(trip, args = {}) {
+  return executeCollectionItem(trip, { ...args, operation: 'add', collection: 'packing' });
+}
+
+function stageName(section) {
+  return section && (section.destination || section.title || '');
+}
+
+function findDestinationStage(trip, destination, stageTitle) {
+  const sections = Array.isArray(trip.sections) ? trip.sections : [];
+  if (stageTitle) {
+    const exact = sections.find(section => section && section.type === 'destination' && section.title === stageTitle);
+    if (exact) return exact;
+  }
+  return sections.find(section => section && section.type === 'destination' && stageName(section) === destination) || null;
+}
+
+function findOrCreateDestinationStage(trip, destination, stageTitle) {
+  trip.sections = Array.isArray(trip.sections) ? trip.sections : [];
+  const clean = String(destination || stageTitle || '').trim();
+  if (!clean) throw new Error('目的地不能为空');
+  let stage = findDestinationStage(trip, clean, stageTitle);
+  if (!stage) {
+    stage = { id: newTripId(), type: 'destination', title: stageTitle || clean, destination: clean, children: [] };
+    trip.sections.push(stage);
+  }
+  if (!Array.isArray(stage.children)) stage.children = [];
+  return stage;
+}
+
+function findItineraryChild(stage) {
+  let child = (stage.children || []).find(item => item && (item.kind === 'itinerary' || item.type === 'timeline'));
+  if (!child) {
+    child = { id: newTripId(), type: 'timeline', kind: 'itinerary', title: '行程具体安排', items: [] };
+    stage.children.push(child);
+  }
+  if (!Array.isArray(child.items)) child.items = [];
+  return child;
+}
+
+function findTimelineItem(trip, itemId) {
+  for (const stage of (trip.sections || [])) for (const child of (stage.children || [])) {
+    if (child && child.type === 'timeline') {
+      const item = (child.items || []).find(entry => entry && entry.id === itemId);
+      if (item) return { stage, child, item };
+    }
+  }
+  return null;
+}
+
+function executeTimelineItem(trip, args = {}) {
+  const op = String(args.operation || 'add');
+  if (op === 'add') {
+    const stage = findOrCreateDestinationStage(trip, args.destination, args.stageTitle);
+    findItineraryChild(stage).items.push({
+      id: newTripId(),
+      day: String(args.day || '').trim(),
+      heading: String(args.heading || '').trim(),
+      desc: String(args.desc || '').trim(),
+      chips: Array.isArray(args.chips) ? args.chips : []
+    });
+    return { message: '已添加具体行程。', focus: 'trip' };
+  }
+  const found = findTimelineItem(trip, args.itemId);
+  if (!found) throw new Error('找不到要修改的具体行程');
+  if (op === 'delete') {
+    found.child.items = found.child.items.filter(item => item.id !== args.itemId);
+    return { message: '已删除具体行程。', focus: 'trip' };
+  }
+  if (op !== 'update') throw new Error(`不支持的行程操作：${op}`);
+  ['day', 'heading', 'desc'].forEach(key => { if (args[key] !== undefined) found.item[key] = String(args[key] || '').trim(); });
+  if (Array.isArray(args.chips)) found.item.chips = args.chips;
+  return { message: '已更新具体行程。', focus: 'trip' };
+}
+
+function findHotelSection(trip, sectionId) {
+  for (const stage of (trip.sections || [])) for (const child of (stage.children || [])) {
+    if (child && child.id === sectionId && (child.kind === 'lodging' || child.type === 'hotel')) return { stage, child };
+  }
+  return null;
+}
+
+function hotelFromArgs(args = {}) {
+  const name = String(args.name || '').trim();
+  if (!name) throw new Error('酒店名不能为空');
+  return {
+    id: args.sectionId || newTripId(), type: 'hotel', kind: 'lodging', title: '住宿', name,
+    stars: String(args.stars || '').trim(),
+    tags: Array.isArray(args.tags) ? args.tags.map(tag => String(tag || '').trim()).filter(Boolean) : [],
+    price: args.price === '' || args.price == null ? '' : Number(args.price),
+    priceUnit: String(args.priceUnit || '').trim(),
+    totalNote: String(args.totalNote || '').trim(),
+    tip: args.tipText ? { icon: '💡', text: String(args.tipText).trim() } : undefined,
+    image: ''
+  };
+}
+
+function executeHotelTool(trip, args = {}) {
+  const op = String(args.operation || 'upsert');
+  if (op === 'delete') {
+    const found = findHotelSection(trip, args.sectionId);
+    if (!found) throw new Error('找不到要删除的住宿');
+    found.stage.children = found.stage.children.filter(child => child.id !== args.sectionId);
+    return { message: '已删除住宿。', focus: 'trip' };
+  }
+  if (op !== 'upsert') throw new Error(`不支持的住宿操作：${op}`);
+  const hotel = hotelFromArgs(args);
+  const found = args.sectionId ? findHotelSection(trip, args.sectionId) : null;
+  if (found) Object.assign(found.child, hotel, { id: found.child.id });
+  else findOrCreateDestinationStage(trip, args.destination, args.stageTitle).children.push(hotel);
+  return { message: `已保存住宿：${hotel.name}。`, focus: 'trip' };
+}
+
+function executeTripReplace(args = {}) {
+  if (!args.updatedTrip || typeof args.updatedTrip !== 'object') throw new Error('缺少要应用的行程数据');
+  const focus = ['trip', 'booking', 'packing', 'expense'].includes(args.focus) ? args.focus : 'trip';
+  return { trip: ensureIds(args.updatedTrip), message: '已应用确认后的行程变更。', focus };
+}
+
+function executeToolCall(trip, call) {
+  const action = call && call.action;
+  if (action === 'expense.add') return executeExpenseAdd(trip, call.args || {});
+  if (action === 'expense.item') return executeExpenseItem(trip, call.args || {});
+  if (action === 'collection.item') return executeCollectionItem(trip, call.args || {});
+  if (action === 'packing.addItem') return executePackingAddItem(trip, call.args || {});
+  if (action === 'trip.timelineItem') return executeTimelineItem(trip, call.args || {});
+  if (action === 'trip.hotel') return executeHotelTool(trip, call.args || {});
+  if (action === 'trip.replace') return executeTripReplace(call.args || {});
+  throw new Error(`暂不支持的工具：${action || 'unknown'}`);
 }
 
 app.http('chatTrip', {
@@ -289,7 +1160,7 @@ app.http('chatTrip', {
     if (!id) return { status: 400, jsonBody: { error: 'missing tripId' } };
     let b;
     try { b = await req.json(); } catch { return { status: 400, jsonBody: { error: 'invalid json' } }; }
-    const trip = b && b.trip;
+    const trip = ensureIds(b && b.trip);
     const history = Array.isArray(b && b.messages) ? b.messages : [];
     if (!trip || typeof trip !== 'object') return { status: 400, jsonBody: { error: 'missing trip' } };
     if (!history.length) return { status: 400, jsonBody: { error: 'missing messages' } };
@@ -315,22 +1186,64 @@ app.http('chatTrip', {
       return { status: 502, jsonBody: { error: '助手出错：' + e.message } };
     }
 
-    const reply = (out && out.reply) ? String(out.reply) : '（助手暂时没有回复，请重试）';
+    let reply = (out && out.reply) ? String(out.reply) : '（助手暂时没有回复，请重试）';
+    const toolCalls = normalizeToolCalls(out && out.toolCalls);
     let updatedTrip = out && out.updatedTrip;
-    if (updatedTrip && typeof updatedTrip === 'object') {
-      updatedTrip = ensureIds(updatedTrip);
-      // 持久化
-      const c = client(); await ensureTable(c);
-      await c.upsertEntity({
-        partitionKey: PK, rowKey: id,
-        data: JSON.stringify(updatedTrip).slice(0, 60000),
-        updatedAt: new Date().toISOString()
-      }, 'Merge');
-    } else {
-      updatedTrip = null;
+    if (!toolCalls.length && !updatedTrip) {
+      const fallbackDeleteCalls = collectionDeleteToolCallsFromText(trip, `${latestUserText(history)}\n${reply}`);
+      if (fallbackDeleteCalls.length) {
+        toolCalls.push(...fallbackDeleteCalls);
+        reply = '我找到了可能要删除的条目，请在弹窗中勾选确认。';
+      }
     }
     const focus = out && ['trip', 'booking', 'packing', 'expense'].includes(out.focus) ? out.focus : null;
+    if (!toolCalls.length && updatedTrip && typeof updatedTrip === 'object') {
+      toolCalls.push({
+        action: 'trip.replace',
+        title: '确认应用行程变更',
+        message: '这是暂未细分为专用工具的行程修改，请确认后再写入。你也可以展开 JSON 做高级修改。',
+        args: { updatedTrip: ensureIds(updatedTrip), focus: focus || 'trip' }
+      });
+    }
+    updatedTrip = null;
 
-    return { jsonBody: { reply, updatedTrip, focus } };
+    return { jsonBody: { reply, updatedTrip, focus, toolCalls } };
+  }
+});
+
+// ---- POST /api/trips/{tripId}/tools/execute ----
+app.http('executeTripTools', {
+  methods: ['POST'], authLevel: 'anonymous', route: 'trips/{tripId}/tools/execute',
+  handler: async (req) => {
+    const id = req.params.tripId;
+    if (!id) return { status: 400, jsonBody: { error: 'missing tripId' } };
+    let b;
+    try { b = await req.json(); } catch { return { status: 400, jsonBody: { error: 'invalid json' } }; }
+    let trip = ensureIds(b && b.trip);
+    const toolCalls = normalizeToolCalls(b && b.toolCalls);
+    if (!trip || typeof trip !== 'object') return { status: 400, jsonBody: { error: 'missing trip' } };
+    if (!toolCalls.length) return { status: 400, jsonBody: { error: 'missing toolCalls' } };
+
+    const messages = [];
+    let focus = null;
+    try {
+      for (const call of toolCalls) {
+        const result = executeToolCall(trip, call);
+        if (result.trip) trip = result.trip;
+        if (result.message) messages.push(result.message);
+        if (result.focus) focus = result.focus;
+      }
+    } catch (e) {
+      return { status: 400, jsonBody: { error: e.message } };
+    }
+
+    const c = client(); await ensureTable(c);
+    await c.upsertEntity({
+      partitionKey: PK, rowKey: id,
+      data: JSON.stringify(trip).slice(0, 60000),
+      updatedAt: new Date().toISOString()
+    }, 'Merge');
+
+    return { jsonBody: { reply: messages.join('\n') || '已执行。', updatedTrip: trip, focus } };
   }
 });

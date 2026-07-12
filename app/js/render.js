@@ -119,9 +119,41 @@ function renderNote(s) {
   return `<div class="card"><p style="color:var(--muted);line-height:1.8;">${esc(s.text || '')}</p></div>`;
 }
 
+function renderArrival(s) {
+  const text = String(s.text || '');
+  const splitAt = text.indexOf('：');
+  const label = splitAt >= 0 ? text.slice(0, splitAt) : /返回|返程|回/.test(text) ? '返程交通' : '交通方式';
+  const detail = splitAt >= 0 ? text.slice(splitAt + 1) : text;
+  const icon = /飞机|飞|航班|机场|浦东/.test(text) ? '✈️' : /自驾|开车|租车|还车|车/.test(text) ? '🚗' : '➜';
+  return `
+    <div class="arrival-route">
+      <div class="arrival-icon">${esc(icon)}</div>
+      <div class="arrival-copy">
+        <div class="arrival-label">${esc(label)}</div>
+        <div class="arrival-text">${esc(detail)}</div>
+      </div>
+    </div>`;
+}
+
+function renderDestination(s) {
+  const children = Array.isArray(s.children) ? s.children : [];
+  const intro = s.summary ? `<p class="destination-summary">${esc(s.summary)}</p>` : '';
+  const blocks = children.map(child => {
+    const fn = child.kind === 'arrival' ? renderArrival : SECTION_RENDERERS[child.type] || renderNote;
+    const title = child.kind === 'arrival' ? '' : `<div class="subsection-title">${esc(child.title || '')}</div>`;
+    return `
+      <div class="subsection" data-kind="${esc(child.kind || child.type || '')}">
+        ${title}
+        ${fn(child)}
+      </div>`;
+  }).join('');
+  return `<div class="destination-card">${intro}${blocks}</div>`;
+}
+
 const SECTION_RENDERERS = {
   flight: renderFlight, hotel: renderHotel, car: renderCar,
-  timeline: renderTimeline, costTable: renderCostTable, note: renderNote
+  timeline: renderTimeline, costTable: renderCostTable, note: renderNote,
+  destination: renderDestination
 };
 
 export function renderSections(sections = []) {
