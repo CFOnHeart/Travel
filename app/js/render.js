@@ -97,7 +97,6 @@ function renderTimeline(s) {
       ${it.heading ? `<h5>${esc(it.heading)}</h5>` : ''}
       ${it.desc ? `<p>${esc(it.desc)}</p>` : ''}
       ${Array.isArray(it.chips) && it.chips.length ? `<div class="meta-row">${it.chips.map(chip).join('')}</div>` : ''}
-      <button class="photo-inline-btn" type="button" data-photo-add data-scope-type="timelineItem" data-child-id="${esc(s.id || '')}" data-item-id="${esc(it.id || '')}" data-label="${esc([it.day, it.heading].filter(Boolean).join(' · '))}">＋ 照片</button>
     </div>`).join('');
   return `<div class="timeline">${items}</div>`;
 }
@@ -149,7 +148,6 @@ function renderDestination(s) {
       </div>`;
   }).join('');
   return `<div class="destination-card" data-section-id="${esc(s.id || '')}" data-destination="${esc(s.destination || s.title || '')}">
-    <div class="destination-actions"><button class="photo-inline-btn" type="button" data-photo-add data-scope-type="destination" data-section-id="${esc(s.id || '')}" data-label="${esc(s.title || s.destination || '')}">＋ 照片</button></div>
     ${intro}${blocks}
   </div>`;
 }
@@ -163,9 +161,14 @@ const SECTION_RENDERERS = {
 export function renderSections(sections = []) {
   return sections.map((s, i) => {
     const fn = SECTION_RENDERERS[s.type] || renderNote;
+    const sectionTitle = esc(s.title || '');
+    const destinationPhotoButton = s.type === 'destination' ? `
+          <button class="photo-section-btn" type="button" title="给${esc(s.destination || s.title || '这个地点')}添加照片" aria-label="给${esc(s.destination || s.title || '这个地点')}添加照片" data-photo-add data-scope-type="destination" data-section-id="${esc(s.id || '')}" data-label="${esc(s.title || s.destination || '')}">
+            <span class="photo-section-btn-icon" aria-hidden="true">📷</span><span class="photo-section-btn-plus" aria-hidden="true">＋</span>
+          </button>` : '';
     return `
       <section class="section">
-        <div class="section-title"><span class="num">${esc(s.num || i + 1)}</span>${esc(s.title || '')}</div>
+        <div class="section-title"><span class="num">${esc(s.num || i + 1)}</span><span class="section-title-text">${sectionTitle}</span>${destinationPhotoButton}</div>
         ${fn(s)}
       </section>`;
   }).join('');
