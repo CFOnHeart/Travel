@@ -865,3 +865,447 @@ footer { text-align: center; color: var(--muted); font-size: .84rem; padding: 26
   .chat-panel { width: 100%; }
   .tool-fields { grid-template-columns: 1fr; }
 }
+
+/* ============================================================
+   Apple Travel refinement
+   Photography-first, quiet chrome, Action Blue controls, light motion
+   ============================================================ */
+:root {
+  --primary: #0066cc;
+  --primary-light: #0071e3;
+  --accent: #ff7a1a;
+  --accent-2: #ffb340;
+  --bg: #f5f5f7;
+  --card: #ffffff;
+  --text: #1d1d1f;
+  --muted: #6e6e73;
+  --line: #e0e0e5;
+  --shadow: 0 18px 52px rgba(0,0,0,.07);
+}
+
+body {
+  background: #f5f5f7;
+  color: #1d1d1f;
+  font-family: "SF Pro Text", "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  letter-spacing: 0;
+}
+
+.hero {
+  min-height: 330px;
+  display: grid;
+  place-items: center;
+  padding: 72px 26px 108px;
+  background:
+    linear-gradient(115deg, rgba(255,255,255,.08) 0 1px, transparent 1px 74px),
+    linear-gradient(180deg, #111113 0%, #1d1d1f 54%, #030304 100%);
+  box-shadow: inset 0 -1px 0 rgba(255,255,255,.08);
+}
+
+body.tpl-ocean .hero,
+body.tpl-sunset .hero,
+body.tpl-minimal .hero {
+  background:
+    linear-gradient(115deg, rgba(255,255,255,.08) 0 1px, transparent 1px 74px),
+    linear-gradient(180deg, #111113 0%, #1d1d1f 54%, #030304 100%);
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  bottom: 58px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(41,151,255,.25), rgba(41,151,255,.92), rgba(255,255,255,.36), transparent);
+  transform-origin: center;
+  animation: route-glow 7s ease-in-out infinite;
+}
+
+.hero::after {
+  content: "✈";
+  position: absolute;
+  left: 12%;
+  bottom: 47px;
+  color: #2997ff;
+  font-size: 18px;
+  transform: translateX(-10px) rotate(12deg);
+  filter: drop-shadow(0 0 12px rgba(41,151,255,.55));
+  animation: flight-pass 7s ease-in-out infinite;
+}
+
+.hero h1 {
+  position: relative;
+  z-index: 1;
+  max-width: 760px;
+  font-family: "SF Pro Display", "Segoe UI", "PingFang SC", system-ui, sans-serif;
+  font-size: 2.85rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.06;
+}
+
+.hero p {
+  position: relative;
+  z-index: 1;
+  color: rgba(255,255,255,.82);
+  font-size: 1.1rem;
+}
+
+.hero .dates {
+  position: relative;
+  z-index: 1;
+  color: #f5f5f7;
+  background: rgba(255,255,255,.12);
+  border-color: rgba(255,255,255,.18);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.16);
+}
+
+.hero .hero-emoji {
+  opacity: .22 !important;
+  animation: emoji-drift 9s ease-in-out infinite;
+}
+
+.trip-toolbar {
+  margin-top: -34px;
+  justify-content: center;
+}
+
+.tool-btn,
+.main-tab,
+.photo-filter,
+.photo-reshuffle,
+.photo-add-main,
+.gen-btn,
+.chat-send {
+  letter-spacing: 0;
+}
+
+.tool-btn {
+  background: rgba(255,255,255,.78);
+  border-color: rgba(0,0,0,.08);
+  color: #333336;
+  box-shadow: 0 10px 28px rgba(0,0,0,.08);
+  backdrop-filter: blur(18px);
+}
+
+.tool-btn:hover {
+  color: #0066cc;
+  transform: translateY(-1px);
+}
+
+.main-tabs {
+  position: sticky;
+  top: 10px;
+  z-index: 30;
+  max-width: 900px;
+  margin-top: 18px;
+  padding: 8px 20px;
+}
+
+.main-tabs::before {
+  content: "";
+  position: absolute;
+  inset: 0 12px;
+  z-index: -1;
+  border: 1px solid rgba(0,0,0,.06);
+  border-radius: 999px;
+  background: rgba(255,255,255,.72);
+  box-shadow: 0 14px 36px rgba(0,0,0,.08);
+  backdrop-filter: blur(18px);
+}
+
+.main-tab {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: #515154;
+  padding: 9px 18px;
+  font-size: .95rem;
+  transition: color .18s ease, background .18s ease, transform .18s ease;
+}
+
+.main-tab:hover { color: #0066cc; transform: translateY(-1px); }
+.main-tab:focus-visible,
+.tool-btn:focus-visible,
+.photo-filter:focus-visible,
+.photo-reshuffle:focus-visible,
+.photo-add-main:focus-visible,
+.photo-section-btn:focus-visible {
+  outline: 3px solid rgba(0,102,204,.28);
+  outline-offset: 3px;
+}
+
+.main-tab.active {
+  background: #1d1d1f;
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 8px 20px rgba(0,0,0,.16);
+}
+
+.wrap { max-width: 940px; }
+.wrap.main-panel { margin-top: 28px; }
+
+.section {
+  margin-top: 42px;
+  animation: travel-fade-up .55s ease both;
+}
+
+.section:nth-child(2) { animation-delay: .04s; }
+.section:nth-child(3) { animation-delay: .08s; }
+.section:nth-child(4) { animation-delay: .12s; }
+.section:nth-child(5) { animation-delay: .16s; }
+
+.section-title {
+  color: #1d1d1f;
+  font-size: 1.38rem;
+  font-weight: 700;
+}
+
+.section-title .num {
+  background: #1d1d1f;
+  box-shadow: 0 10px 26px rgba(0,0,0,.16);
+}
+
+.card,
+.destination-card,
+.todo-group,
+.recent-item,
+.gen-card,
+.tool-confirm,
+.p-head {
+  border-color: rgba(0,0,0,.06);
+  border-radius: 22px;
+  box-shadow: 0 18px 52px rgba(0,0,0,.07);
+}
+
+.destination-card,
+.card {
+  background: rgba(255,255,255,.92);
+}
+
+.destination-card:hover,
+.card:hover,
+.todo-group:hover {
+  box-shadow: 0 24px 70px rgba(0,0,0,.1);
+}
+
+.destination-summary,
+.tl-item p,
+.flight .city .name,
+.flight .path small,
+.checklist-head .sub,
+.photo-wall-head p {
+  color: #6e6e73;
+}
+
+.subsection-title::before {
+  background: #0066cc;
+}
+
+.arrival-route {
+  background: #fafafc;
+  border-color: #e5e5ea;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.82);
+}
+
+.arrival-route::after {
+  background: linear-gradient(90deg, transparent, rgba(0,102,204,.42));
+  animation: route-shimmer 3.8s ease-in-out infinite;
+}
+
+.arrival-icon {
+  border-radius: 14px;
+  box-shadow: 0 8px 20px rgba(0,0,0,.08);
+}
+
+.arrival-label,
+.photo-eyebrow,
+.tool-confirm h3,
+.chat-title b,
+.ed-section-title,
+.recent-item .r-title {
+  color: #0066cc;
+}
+
+.timeline::before,
+.exp-lane::before {
+  background: linear-gradient(180deg, #0066cc, #2997ff, #ff9500);
+  background-size: 100% 180%;
+  animation: timeline-flow 5.5s ease-in-out infinite;
+}
+
+.tl-item::before,
+.exp-dot-item .dot {
+  border-color: #2997ff;
+  box-shadow: 0 0 0 5px rgba(41,151,255,.08);
+  animation: travel-pulse 4.2s ease-in-out infinite;
+}
+
+.tl-item .day,
+.main-tab.active,
+.photo-filter.active {
+  background: #1d1d1f;
+}
+
+.chip,
+.tags span,
+.price-line .total {
+  background: #fafafc;
+  border-color: #e5e5ea;
+  color: #333336;
+}
+
+.price-line .big,
+.flight .price .amt,
+.e-card .e-amt,
+.p-head .p-total,
+.exp-grand {
+  color: #ff7a1a;
+}
+
+.photo-wall-head h2,
+.checklist-head h2,
+.exp-head h2,
+.home-hero h1 {
+  color: #1d1d1f;
+  font-family: "SF Pro Display", "Segoe UI", "PingFang SC", system-ui, sans-serif;
+  font-weight: 700;
+}
+
+.photo-add-main,
+.gen-btn,
+.chat-send,
+.btn.primary,
+.tool-btn.primary {
+  background: #0066cc !important;
+  color: #fff !important;
+  box-shadow: 0 12px 28px rgba(0,102,204,.24);
+}
+
+.photo-reshuffle,
+.photo-filter,
+.mini-btn,
+.btn.ghost {
+  border-color: rgba(0,0,0,.08);
+  background: #fff;
+  color: #0066cc;
+}
+
+.photo-wall-board {
+  background:
+    linear-gradient(90deg, rgba(0,0,0,.026) 0 1px, transparent 1px 88px),
+    linear-gradient(0deg, rgba(0,0,0,.018) 0 1px, transparent 1px 72px),
+    #f5f5f7;
+  border-color: rgba(0,0,0,.06);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.8), 0 24px 70px rgba(0,0,0,.1);
+}
+
+.photo-pin {
+  box-shadow: 0 20px 42px rgba(0,0,0,.2), 0 2px 1px rgba(0,0,0,.06);
+  animation: photo-float 7s ease-in-out infinite;
+}
+
+.photo-pin:nth-of-type(2n) { animation-delay: -1.8s; }
+.photo-pin:nth-of-type(3n) { animation-delay: -3.2s; }
+
+.photo-sphere-panel {
+  background: linear-gradient(180deg, #050506, #1d1d1f 58%, #000);
+}
+
+.photo-sphere-copy span { color: #2997ff; }
+
+.chat-fab {
+  background: #0066cc;
+  box-shadow: 0 16px 36px rgba(0,102,204,.32);
+  animation: travel-breathe 4.8s ease-in-out infinite;
+}
+
+.modal,
+.editor,
+.chat-panel {
+  background: #f5f5f7;
+}
+
+.editor-head,
+.editor-foot,
+.chat-head,
+.chat-inputbar {
+  background: rgba(255,255,255,.86);
+  backdrop-filter: blur(18px);
+}
+
+.gen-overlay {
+  background: rgba(245,245,247,.88);
+  backdrop-filter: blur(18px);
+}
+
+.spinner,
+.chat-thinking .spin {
+  border-top-color: #0066cc;
+}
+
+@keyframes travel-fade-up {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes route-glow {
+  0%, 100% { opacity: .42; transform: scaleX(.9); }
+  50% { opacity: .9; transform: scaleX(1); }
+}
+
+@keyframes flight-pass {
+  0% { transform: translateX(-10px) translateY(0) rotate(12deg); opacity: 0; }
+  16% { opacity: 1; }
+  78% { opacity: 1; }
+  100% { transform: translateX(76vw) translateY(-8px) rotate(12deg); opacity: 0; }
+}
+
+@keyframes emoji-drift {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes route-shimmer {
+  0%, 100% { opacity: .35; transform: translateX(0); }
+  50% { opacity: .85; transform: translateX(-10px); }
+}
+
+@keyframes timeline-flow {
+  0%, 100% { background-position: 0 0; }
+  50% { background-position: 0 100%; }
+}
+
+@keyframes travel-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 5px rgba(41,151,255,.08); }
+  50% { transform: scale(1.06); box-shadow: 0 0 0 9px rgba(41,151,255,.04); }
+}
+
+@keyframes photo-float {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -3px; }
+}
+
+@keyframes travel-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+
+@media (max-width: 760px) {
+  .hero { min-height: 300px; padding: 58px 20px 96px; }
+  .hero h1 { font-size: 2rem; }
+  .main-tabs { top: 6px; overflow-x: auto; justify-content: flex-start; flex-wrap: nowrap; }
+  .main-tabs { scrollbar-width: none; }
+  .main-tabs::-webkit-scrollbar { display: none; }
+  .main-tabs::before { inset: 0 8px; }
+  .main-tab { white-space: nowrap; padding: 9px 14px; }
+  .section { margin-top: 34px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}
