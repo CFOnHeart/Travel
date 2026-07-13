@@ -1816,20 +1816,12 @@ body.tpl-minimal .hero {
   width: 92px;
   height: 92px;
   display: block;
-  background-image: url("../images/bear-wave-sprite.png");
+  background-image: url("../images/bear-chat-pet.png");
   background-repeat: no-repeat;
-  background-size: 920px 92px;
-  background-position: 0 0;
+  background-size: contain;
+  background-position: center;
   filter: drop-shadow(0 8px 12px rgba(34,34,34,.14));
   transform: translateY(-4px);
-  animation: bear-wave 1.25s steps(10) infinite;
-}
-
-.chat-fab.hidden .chat-pet { animation-play-state: paused; }
-
-@keyframes bear-wave {
-  from { background-position: 0 0; }
-  to { background-position: -920px 0; }
 }
 
 @keyframes bear-bubble-breathe {
@@ -1861,11 +1853,6 @@ body.tpl-minimal .hero {
   .chat-pet {
     width: 84px;
     height: 84px;
-    background-size: 840px 84px;
-  }
-
-  @keyframes bear-wave {
-    from { background-position: 0 0; }
-    to { background-position: -840px 0; }
+    background-size: contain;
   }
 }
