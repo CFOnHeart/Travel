@@ -1,4 +1,4 @@
-/** 🤖 行程助手：右侧聊天框，通过对话增删改查行程/清单/物品/花销。 */
+/** 小白熊行程助手：右侧聊天框，通过对话增删改查行程/清单/物品/花销。 */
 import { chatTrip, executeTripTools, saveTrip } from './api.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -28,7 +28,7 @@ export function initChat(ctx) {
     fab.classList.add('hidden'); panel.setAttribute('aria-hidden', 'false');
     if (!greeted) {
       greeted = true;
-      addBubble('bot', '你好！我是行程助手 🤖\n你可以让我帮你修改行程，例如：\n· 「把泸沽湖那笔花销改成 600」\n· 「给出行物品加一项防晒霜」\n· 「删掉返程机票的预定项」\n· 「这次一共花了多少钱？」');
+      addBubble('bot', '你好！我是小白熊行程助手\n你可以让我帮你修改行程，例如：\n· 「把泸沽湖那笔花销改成 600」\n· 「给出行物品加一项防晒霜」\n· 「删掉返程机票的预定项」\n· 「这次一共花了多少钱？」');
     }
     setTimeout(() => input.focus(), 250);
   }
