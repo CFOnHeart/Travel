@@ -1,9 +1,23 @@
 /** 行程 Schema → HTML 渲染（复用与云南页一致的视觉类名）。 */
 
 export function esc(s) {
-  return String(s == null ? '' : s).replace(/[&<>"']/g, c => (
+  return cleanText(s).replace(/[&<>"']/g, c => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
   ));
+}
+
+function cleanText(value) {
+  return String(value == null ? '' : value)
+    .replace(/\u00e2[\u0080\u20ac][\u0093\u201c]/g, '-')
+    .replace(/\u00e2[\u0080\u20ac][\u0094\u201d]/g, '-')
+    .replace(/\u00e2[\u0080\u20ac][\u0098\u02dc]/g, "'")
+    .replace(/\u00e2[\u0080\u20ac][\u0099\u2122]/g, "'")
+    .replace(/\u00e2[\u0080\u20ac][\u009c\u0153]/g, '"')
+    .replace(/\u00e2[\u0080\u20ac][\u009d\u009d]/g, '"')
+    .replace(/\u00e2[\u0080\u20ac][\u00a6\u00a6]/g, '...')
+    .replace(/\u00e2[\u009c\u0153][\u0088\u02c6](?:\u00ef\u00b8\u008f)?/g, 'AIR')
+    .replace(/\u00c2\u00a0/g, ' ')
+    .replace(/\u00c2\u00b7/g, '·');
 }
 
 // ---------- Hero ----------
@@ -33,7 +47,7 @@ function renderFlight(s) {
           <div class="city"><div class="time">${esc(f.time || '')}</div><div class="name">${esc(f.name || '')} ${esc(f.code || '')}</div></div>
           <div class="path">
             <small>${esc(s.date || '')} ${esc(s.weekday || '')}</small>
-            <div class="line"></div><div class="plane">✈️</div>
+            <div class="line"></div><div class="plane">AIR</div>
             <small>${esc(s.flightNo || '')}</small>
           </div>
           <div class="city"><div class="time">${esc(t.time || '')}</div><div class="name">${esc(t.name || '')} ${esc(t.code || '')}</div></div>
@@ -90,6 +104,14 @@ function chip(c) {
   return `<span class="chip${kind}">${esc(c.text)}</span>`;
 }
 
+function cleanGroupTitle(value, fallback = '未分组') {
+  const text = String(value || '')
+    .replace(/^(?:[\u00c0-\u00ff\u0080-\u009f\ufffd]+|\s)+/g, '')
+    .replace(/^[^\w\u4e00-\u9fff]+/u, '')
+    .trim();
+  return text || fallback;
+}
+
 function renderTimeline(s) {
   const items = (s.items || []).map(it => `
     <div class="tl-item" data-photo-scope="timelineItem" data-child-id="${esc(s.id || '')}" data-item-id="${esc(it.id || '')}">
@@ -124,7 +146,7 @@ function renderArrival(s) {
   const splitAt = text.indexOf('：');
   const label = splitAt >= 0 ? text.slice(0, splitAt) : /返回|返程|回/.test(text) ? '返程交通' : '交通方式';
   const detail = splitAt >= 0 ? text.slice(splitAt + 1) : text;
-  const icon = /飞机|飞|航班|机场|浦东/.test(text) ? '✈️' : /自驾|开车|租车|还车|车/.test(text) ? '🚗' : '➜';
+  const icon = /飞机|飞|航班|机场|浦东/.test(text) ? 'AIR' : /自驾|开车|租车|还车|车/.test(text) ? 'CAR' : 'GO';
   return `
     <div class="arrival-route">
       <div class="arrival-icon">${esc(icon)}</div>
@@ -182,7 +204,7 @@ export function renderChecklistPanel(trip) {
   const pct = total ? Math.round(done / total * 100) : 0;
   const cards = groups.map(g => `
     <div class="todo-group">
-      <div class="g-title">${esc(g.icon || '📌')} ${esc(g.group || '')}</div>
+      <div class="g-title"><span class="g-title-mark" aria-hidden="true"></span>${esc(cleanGroupTitle(g.group, '预定'))}</div>
       ${(g.items || []).map(it => todoRow(it)).join('')}
     </div>`).join('');
   return `
@@ -219,7 +241,7 @@ export function renderPackingPanel(trip) {
   const pct = total ? Math.round(done / total * 100) : 0;
   const cards = groups.map(g => `
     <div class="todo-group">
-      <div class="g-title">${esc(g.icon || '🎒')} ${esc(g.group || '')}</div>
+      <div class="g-title"><span class="g-title-mark" aria-hidden="true"></span>${esc(cleanGroupTitle(g.group, '物品'))}</div>
       ${(g.items || []).map(it => `
         <div class="todo ${it.done ? 'done' : 'pending'}" data-id="${esc(it.id)}" data-pack="1">
           <span class="box">${it.done ? '✓' : ''}</span>

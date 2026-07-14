@@ -3,7 +3,7 @@ import { getTrip, saveTrip, uploadImage } from './api.js';
 import { RECENT_KEY } from './config.js';
 import {
   renderHero, renderSections, renderChecklistPanel, renderPackingPanel, esc
-} from './render.js';
+} from './render.js?v=figma-travel-20260715';
 import { initEditor, setEditorData } from './editor.js';
 import { initChat } from './chat.js';
 import { initPhotos, renderPhotosPanel } from './photos.js';

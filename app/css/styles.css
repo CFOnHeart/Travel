@@ -1856,3 +1856,454 @@ body.tpl-minimal .hero {
     background-size: contain;
   }
 }
+
+/* ============================================================
+  Figma Travel refinement
+   Monochrome product frame with playful editorial color blocks
+   ============================================================ */
+:root {
+  --primary: #000000;
+  --primary-light: #2a2a2a;
+  --accent: #ff3d8b;
+  --accent-2: #c5b0f4;
+  --bg: #ffffff;
+  --card: #ffffff;
+  --text: #000000;
+  --muted: #5f5f5f;
+  --line: #e6e6e6;
+  --shadow: 0 1px 0 rgba(0,0,0,.08), 0 18px 44px rgba(0,0,0,.08);
+  --figma-lime: #dceeb1;
+  --figma-lilac: #c5b0f4;
+  --figma-cream: #f4ecd6;
+  --figma-pink: #efd4d4;
+  --figma-mint: #c8e6cd;
+  --figma-coral: #f3c9b6;
+  --figma-navy: #1f1d3d;
+}
+
+html { background: #ffffff; }
+
+body {
+  background:
+    linear-gradient(90deg, rgba(0,0,0,.045) 0 1px, transparent 1px 96px),
+    linear-gradient(0deg, rgba(0,0,0,.035) 0 1px, transparent 1px 96px),
+    #ffffff;
+  color: #000000;
+  font-family: Inter, "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  letter-spacing: 0;
+}
+
+body::before,
+body::after { content: none; }
+
+.hero {
+  min-height: 360px;
+  background:
+    radial-gradient(circle at 12% 16%, var(--figma-lilac) 0 13%, transparent 14%),
+    radial-gradient(circle at 84% 24%, var(--figma-lime) 0 16%, transparent 17%),
+    linear-gradient(135deg, #000000 0 54%, var(--figma-navy) 55% 100%);
+  color: #ffffff;
+  border-bottom: 1px solid #000000;
+  box-shadow: none;
+}
+
+.hero::before {
+  background:
+    linear-gradient(90deg, transparent 0 10%, rgba(255,255,255,.1) 10% 11%, transparent 11% 100%),
+    linear-gradient(0deg, transparent 0 18%, rgba(255,255,255,.08) 18% 19%, transparent 19% 100%);
+  background-size: 84px 84px;
+  animation: figma-grid-drift 18s linear infinite;
+  opacity: .72;
+}
+
+.hero::after {
+  content: "";
+  background: linear-gradient(90deg, var(--figma-coral), var(--figma-pink), var(--figma-cream));
+  height: 18px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: auto;
+  color: transparent;
+  font-size: 0;
+  transform: none;
+  filter: none;
+  animation: none;
+  opacity: 1;
+}
+
+.hero h1 {
+  color: #ffffff;
+  font-size: clamp(2.4rem, 5vw, 4.8rem);
+  font-weight: 520;
+  line-height: 1;
+  letter-spacing: 0;
+  text-shadow: none;
+}
+
+.hero p,
+.hero .dates {
+  color: #ffffff;
+  text-shadow: none;
+}
+
+.hero .hero-emoji { display: none; }
+
+.hero .dates {
+  background: #ffffff;
+  color: #000000;
+  border: 1px solid #ffffff;
+  border-radius: 999px;
+  backdrop-filter: none;
+}
+
+.tool-btn,
+.main-tabs,
+.tpl-menu,
+.card,
+.destination-card,
+.todo-group,
+.modal,
+.editor,
+.chat-panel,
+.gen-modal,
+.arrival-route,
+.photo-wall-board {
+  background: #ffffff;
+  border: 1px solid #000000;
+  box-shadow: 8px 8px 0 rgba(0,0,0,.94);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.card,
+.destination-card,
+.todo-group,
+.modal,
+.editor,
+.chat-panel,
+.gen-modal,
+.arrival-route,
+.photo-wall-board {
+  border-radius: 24px;
+}
+
+.main-tabs {
+  border-radius: 999px;
+  padding: 8px;
+}
+
+.main-tabs::before { content: none; }
+
+.main-tab,
+.tool-btn,
+.photo-filter,
+.photo-reshuffle,
+.mini-btn,
+.btn,
+.gen-btn,
+.chat-send,
+.photo-add-main,
+.tool-btn.primary {
+  border-radius: 999px;
+  font-weight: 650;
+  letter-spacing: 0;
+}
+
+.main-tab {
+  color: #000000;
+  border: 1px solid transparent;
+  background: transparent;
+}
+
+.main-tab:hover {
+  color: #000000;
+  background: var(--figma-cream);
+  transform: none;
+}
+
+.main-tab.active,
+.photo-filter.active,
+.tl-item .day,
+.photo-add-main,
+.gen-btn,
+.chat-send,
+.btn.primary,
+.tool-btn.primary {
+  background: #000000 !important;
+  color: #ffffff !important;
+  border-color: #000000 !important;
+  box-shadow: none;
+}
+
+.section { margin-top: 42px; }
+
+.section-title,
+.photo-wall-head h2,
+.checklist-head h2,
+.exp-head h2,
+.home-hero h1 {
+  color: #000000;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-shadow: none;
+}
+
+.section-title .num {
+  background: #000000;
+  color: #ffffff;
+  border: 1px solid #000000;
+  border-radius: 8px;
+  box-shadow: 4px 4px 0 var(--figma-lilac);
+}
+
+.section:nth-of-type(3n + 1) .card,
+.section:nth-of-type(3n + 1) .destination-card,
+.section:nth-of-type(3n + 1) .todo-group { background: var(--figma-lime); }
+
+.section:nth-of-type(3n + 2) .card,
+.section:nth-of-type(3n + 2) .destination-card,
+.section:nth-of-type(3n + 2) .todo-group { background: var(--figma-cream); }
+
+.section:nth-of-type(3n) .card,
+.section:nth-of-type(3n) .destination-card,
+.section:nth-of-type(3n) .todo-group { background: var(--figma-pink); }
+
+.todo-group > .g-title {
+  color: #000000;
+  letter-spacing: .2px;
+  text-transform: none;
+}
+
+.g-title-mark {
+  width: 13px;
+  height: 13px;
+  display: inline-block;
+  flex: 0 0 auto;
+  border-radius: 4px;
+  background: #000000;
+  box-shadow: 3px 3px 0 var(--figma-lilac);
+}
+
+.destination-card:hover,
+.card:hover,
+.todo-group:hover {
+  border-color: #000000;
+  box-shadow: 10px 10px 0 #000000;
+  transform: none;
+}
+
+.destination-summary,
+.tl-item p,
+.flight .path small,
+.checklist-head .sub,
+.photo-wall-head p,
+.sub,
+.chat-sub,
+.sync-status,
+.sidebar-note { color: #4f4f4f; }
+
+.subsection-title::before,
+.timeline::before,
+.exp-lane::before { background: #000000; }
+
+.tl-item::before,
+.exp-dot-item .dot {
+  border-color: #000000;
+  box-shadow: 0 0 0 6px var(--figma-lilac);
+  animation: none;
+}
+
+.arrival-route { background: var(--figma-mint); }
+
+.flight .path .plane {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+  height: 24px;
+  margin: 4px auto;
+  padding: 0 9px;
+  border: 1px solid #000000;
+  border-radius: 999px;
+  background: #000000;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .6px;
+  line-height: 1;
+}
+
+.flight .path .line {
+  border-top: 2px solid #000000;
+}
+
+.arrival-icon {
+  position: relative;
+  overflow: hidden;
+  color: transparent;
+  font-size: 0;
+  background: #000000;
+  border: 1px solid #000000;
+  border-radius: 999px;
+  box-shadow: 4px 4px 0 var(--figma-lilac);
+}
+
+.arrival-icon::before {
+  content: "";
+  position: absolute;
+  width: 18px;
+  height: 2px;
+  left: 50%;
+  top: 50%;
+  background: #ffffff;
+  transform: translate(-55%, -50%);
+}
+
+.arrival-icon::after {
+  content: "";
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  right: 15px;
+  top: 50%;
+  border-top: 2px solid #ffffff;
+  border-right: 2px solid #ffffff;
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.chip,
+.tags span,
+.price-line .total,
+.todo,
+.file-drop,
+.modal input[type=text],
+.modal input[type=number],
+.modal input[type=datetime-local],
+.modal textarea,
+.ed-input,
+.ed-text,
+.chat-inputbar textarea {
+  background: #ffffff;
+  border: 1px solid #000000;
+  border-radius: 8px;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.price-line .big,
+.flight .price .amt,
+.e-card .e-amt,
+.p-head .p-total,
+.exp-grand,
+.arrival-label,
+.photo-eyebrow,
+.tool-confirm h3,
+.chat-title b,
+.ed-section-title,
+.recent-item .r-title { color: #000000; }
+
+.photo-section-btn {
+  background: var(--figma-lilac);
+  border: 1px solid #000000;
+  color: #000000;
+  box-shadow: 4px 4px 0 #000000;
+}
+
+.photo-section-btn-plus {
+  background: #000000;
+  box-shadow: none;
+}
+
+.photo-wall-board {
+  background:
+    linear-gradient(90deg, rgba(0,0,0,.05) 0 1px, transparent 1px 64px),
+    linear-gradient(0deg, rgba(0,0,0,.045) 0 1px, transparent 1px 64px),
+    var(--figma-mint);
+}
+
+.photo-pin {
+  border-color: #000000;
+  box-shadow: 6px 6px 0 rgba(0,0,0,.92);
+  animation: none;
+}
+
+.photo-sphere-panel {
+  background: #000000;
+  border: 1px solid #000000;
+  box-shadow: 8px 8px 0 var(--figma-lilac);
+}
+
+.editor-mask,
+.chat-mask,
+.modal-mask,
+.tool-confirm-mask,
+.gen-mask {
+  background: rgba(0,0,0,.48);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.editor-head,
+.editor-foot,
+.chat-head,
+.chat-inputbar {
+  background: #ffffff;
+  border-color: #000000;
+}
+
+.btn.ghost,
+.mini-btn,
+.photo-filter,
+.photo-reshuffle {
+  background: #ffffff;
+  color: #000000;
+  border: 1px solid #000000;
+}
+
+.btn.ghost:hover,
+.mini-btn:hover,
+.photo-filter:hover,
+.photo-reshuffle:hover { background: var(--figma-lime); }
+
+.chat-fab {
+  background: #ffffff;
+  border: 1px solid #000000;
+  box-shadow: 6px 6px 0 #000000;
+  animation: bear-bubble-breathe 4.8s ease-in-out infinite;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.chat-fab::before { background: #ffffff; box-shadow: none; }
+
+.chat-fab::after {
+  content: "Chat with me";
+  background: var(--figma-lime);
+  border: 1px solid #000000;
+  border-radius: 999px 999px 999px 6px;
+  color: #000000;
+  box-shadow: 4px 4px 0 #000000;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+@keyframes figma-grid-drift {
+  from { background-position: 0 0; }
+  to { background-position: 84px 84px; }
+}
+
+@media (max-width: 760px) {
+  .hero { min-height: 330px; }
+  .hero h1 { font-size: 2.35rem; }
+  .main-tabs { box-shadow: 5px 5px 0 #000000; }
+  .card,
+  .destination-card,
+  .todo-group,
+  .photo-wall-board { box-shadow: 5px 5px 0 #000000; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero::before { animation: none !important; }
+}
