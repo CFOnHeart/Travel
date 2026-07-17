@@ -1530,11 +1530,14 @@ app.http('executeTripTools', {
 });
 
 module.exports.__test = {
+  attachGenerationNotes,
   answerReadOnlyQuestion,
   buildTripContextSummary,
   buildChatResponse,
   collectionDeleteToolCallsFromText,
+  executeToolCall,
   extractTripPlaces,
+  generateValidatedTrip,
   hasExplicitMutationIntent,
   itineraryForDate,
   latestUserText,

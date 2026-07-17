@@ -136,6 +136,20 @@ test('builds a readable trip context summary', () => {
   assert.match(summary, /未完成预定：交通 \/ 返程机票/);
 });
 
+test('attaches user-facing best-effort generation notes instead of exposing validation errors', () => {
+  const trip = __test.attachGenerationNotes(
+    sampleTrip(),
+    '7/21 飞丽江并租车，7/24 返回丽江住宿，7/25 机场还车。',
+    { ok: false, issues: ['内部结构检查问题'] },
+    true
+  );
+
+  assert.equal(trip.meta.generationNotes.needsReview, true);
+  assert.match(trip.meta.generationNotes.title, /可编辑版本/);
+  assert.match(trip.meta.generationNotes.chatHint, /AI 助手聊天/);
+  assert.doesNotMatch(JSON.stringify(trip.meta.generationNotes), /内部结构检查问题/);
+});
+
 test('keeps unfinished booking query read-only even if model returns accidental tools', () => {
   const result = __test.buildChatResponse(sampleTrip(), [{ role: 'user', content: '我还有什么预定是没有完成的？' }], {
     reply: '还有 1 个未完成预定：交通 / 返程机票（丽江到上海）。',

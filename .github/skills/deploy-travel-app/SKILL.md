@@ -30,6 +30,18 @@ Default is **all**. If the user says only "frontend" or "backend", do just that 
 
 ## Procedure
 
+### Mandatory pre-deployment test gate
+Run this before **every** deployment, including frontend-only, backend-only, and all scopes:
+
+```powershell
+Push-Location api
+npm test
+if ($LASTEXITCODE -ne 0) { Pop-Location; throw "Chat regression cases failed. Deployment stopped." }
+Pop-Location
+```
+
+All cases under `api/test/`, including the readable 小白熊行程助手 cases in `api/test/chat-cases/`, must pass. These cases verify tool-based add/update/delete execution, read-only trip-context answers, ordinary conversation, and accidental-write prevention. Never commit, push, or deploy when this command fails. Fix the regression and rerun the complete suite first. The bundled deployment script enforces this gate automatically.
+
 ### A. Frontend (GitHub Pages)
 1. Ensure the served copy matches the source:
    ```powershell
@@ -63,6 +75,10 @@ Default is **all**. If the user says only "frontend" or "backend", do just that 
    ```
 3. Validate code:
    ```powershell
+   Push-Location api
+   npm test
+   if ($LASTEXITCODE -ne 0) { Pop-Location; throw "Chat regression cases failed. Deployment stopped." }
+   Pop-Location
    node --check api\src\functions\trips.js
    node --check app\js\chat.js
    node --check app\js\api.js
@@ -178,6 +194,7 @@ The bundled script does both parts with checks and a smoke test:
 See [deploy.ps1](./scripts/deploy.ps1). Pass `-Scope frontend` or `-Scope backend` to limit.
 
 ## Validation Checklist
+- [ ] Mandatory `npm test` gate passed, including all `api/test/chat-cases/` cases.
 - [ ] `云南/index.html` is byte-identical to `云南/旅游计划.html`.
 - [ ] `git push` succeeded (no rejected/non-fast-forward).
 - [ ] Pages URL returns 200 and shows the new content.

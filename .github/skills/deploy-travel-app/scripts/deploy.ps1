@@ -24,6 +24,16 @@ $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..\..")).Path
 Set-Location $RepoRoot
 Write-Host "Repo root: $RepoRoot" -ForegroundColor Cyan
 
+Write-Host "`n=== Mandatory pre-deployment chat tests ===" -ForegroundColor Green
+Push-Location "api"
+try {
+  npm test
+  if ($LASTEXITCODE -ne 0) { throw "Chat regression cases failed. Deployment stopped." }
+} finally {
+  Pop-Location
+}
+Write-Host "All chat regression cases passed." -ForegroundColor Green
+
 # Derive Function App name from API_BASE (js/config.js, fallback to the HTML)
 function Get-FunctionAppName {
   foreach ($f in @("云南/js/config.js", "云南/旅游计划.html")) {
