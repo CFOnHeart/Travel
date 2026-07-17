@@ -304,14 +304,53 @@ function deterministicIssues(trip) {
   return issues;
 }
 
+function attachGenerationNotes(trip, originalText, validation, bestEffort = false) {
+  trip = trip && typeof trip === 'object' ? trip : {};
+  trip.meta = trip.meta && typeof trip.meta === 'object' ? trip.meta : {};
+  const places = extractTripPlaces(trip);
+  const text = String(originalText || '');
+  const decisions = [];
+
+  if (places.length) decisions.push(`按旅行顺序整理为 ${places.join(' → ')} 等地点阶段，方便逐段查看。`);
+  if (/(航班|飞机|机场|租车|自驾|还车)/.test(text)) decisions.push('将航班、租车、跨城交通和还车动作放到对应日期或目的地阶段。');
+  if (/(住宿|酒店|住)/.test(text)) decisions.push('将住宿信息归入对应目的地；未明确的房价或晚数保留为待定，而不是随意补全。');
+  if (/(已完成|预定|预订|门票)/.test(text)) decisions.push('根据原文整理预定清单，并尽量保留已完成状态和完成人。');
+  if (/(¥|￥|元|人均|价格|费用)/.test(text)) decisions.push('已知费用按原文展示；缺失费用不会阻止页面生成，可稍后继续补充。');
+  if (!decisions.length) decisions.push('已按原文的日期、地点和活动顺序整理为可编辑行程。');
+
+  const validationIssues = Array.isArray(validation && validation.issues) ? validation.issues : [];
+  trip.meta.generationNotes = {
+    title: bestEffort ? 'AI 已先生成可编辑版本' : 'AI 已完成行程整理',
+    summary: bestEffort
+      ? '部分日期边界、费用或阶段归属不够明确。我优先保留了原文信息，并按较合理的旅行顺序生成页面，没有因为细节不完整而中断。'
+      : '我已根据你的描述整理日期、目的地、交通、住宿、预定和费用信息。',
+    decisions: decisions.slice(0, 5),
+    needsReview: bestEffort || validationIssues.length > 0,
+    reviewHint: bestEffort
+      ? '建议快速检查日期、住宿晚数、还车安排和待定费用。'
+      : '请快速核对日期、价格和预定状态是否符合你的实际安排。',
+    chatHint: '之后想调整任何内容，直接打开右下角 AI 助手聊天即可，例如“把 7/24 的住宿改到束河古镇附近”。'
+  };
+  return trip;
+}
+
 async function generateValidatedTrip(text) {
   let trip = ensureIds(await callOpenAI(text));
   let lastValidation = null;
+  let bestEffort = false;
 
   for (let attempt = 1; attempt <= 3; attempt++) {
-    lastValidation = await validateGeneratedTrip(text, trip);
+    try {
+      lastValidation = await validateGeneratedTrip(text, trip);
+    } catch (error) {
+      bestEffort = true;
+      lastValidation = { ok: false, issues: ['自动复核暂时不可用'], repairInstructions: '' };
+      break;
+    }
     const localIssues = deterministicIssues(trip);
-    if (lastValidation && lastValidation.ok === true && !localIssues.length) return trip;
+    if (lastValidation && lastValidation.ok === true && !localIssues.length) {
+      return ensureIds(attachGenerationNotes(trip, text, lastValidation, false));
+    }
     if (localIssues.length) {
       lastValidation = {
         ok: false,
@@ -319,12 +358,19 @@ async function generateValidatedTrip(text) {
         repairInstructions: '修复确定性结构问题：' + localIssues.join('；')
       };
     }
-    if (attempt === 3) break;
-    trip = ensureIds(await repairGeneratedTrip(text, trip, lastValidation));
+    if (attempt === 3) {
+      bestEffort = true;
+      break;
+    }
+    try {
+      trip = ensureIds(await repairGeneratedTrip(text, trip, lastValidation));
+    } catch (error) {
+      bestEffort = true;
+      break;
+    }
   }
 
-  const issues = Array.isArray(lastValidation && lastValidation.issues) ? lastValidation.issues.join('；') : '未知结构问题';
-  throw new Error('行程结构合规检查未通过：' + issues);
+  return ensureIds(attachGenerationNotes(trip, text, lastValidation, bestEffort || !(lastValidation && lastValidation.ok)));
 }
 
 const DESTINATION_NAMES = ['西双版纳', '丽江', '泸沽湖', '昆明', '大理', '香格里拉', '玉龙雪山'];
@@ -702,9 +748,159 @@ app.http('putTrip', {
 });
 
 // ---- POST /api/trips/{tripId}/chat ----
+function pushUnique(list, value) {
+  const text = String(value || '').trim();
+  if (!text || text === '返程') return;
+  if (!list.includes(text)) list.push(text);
+}
+
+function extractTripPlaces(trip) {
+  const places = [];
+  const allText = JSON.stringify(trip || {});
+  if (/上海浦东/.test(allText)) pushUnique(places, '上海浦东');
+  else if (/上海/.test(allText)) pushUnique(places, '上海');
+
+  (trip.sections || []).forEach(section => {
+    if (!section || typeof section !== 'object') return;
+    if (section.type === 'destination') pushUnique(places, section.destination || section.title);
+    if (section.type === 'flight') {
+      pushUnique(places, section.from && section.from.name);
+      pushUnique(places, section.to && section.to.name);
+    }
+    inferDestinations(section).forEach(place => pushUnique(places, place));
+  });
+  return places;
+}
+
+function pendingBookingItems(trip) {
+  const items = [];
+  (trip.checklist || []).forEach(group => (group.items || []).forEach(item => {
+    if (item && !item.done) items.push({ group: group.group || '未分组', name: item.name || '未命名', meta: item.meta || '' });
+  }));
+  return items;
+}
+
+function expenseSummary(trip) {
+  const people = new Map();
+  (trip.people || []).forEach(person => {
+    if (person && person.id) people.set(person.id, person.name || '未命名');
+  });
+  const expenses = Array.isArray(trip.expenses) ? trip.expenses : [];
+  const total = expenses.reduce((sum, item) => sum + (Number(item && item.amount) || 0), 0);
+  const byPerson = new Map();
+  expenses.forEach(item => {
+    const name = people.get(item && item.personId) || '未指定人员';
+    byPerson.set(name, (byPerson.get(name) || 0) + (Number(item && item.amount) || 0));
+  });
+  return { total, byPerson: Array.from(byPerson.entries()) };
+}
+
+function money(value) {
+  return Math.round((Number(value) || 0) * 100) / 100;
+}
+
+function normalizedDateTokens(text) {
+  const raw = String(text || '');
+  const tokens = new Set();
+  for (const match of raw.matchAll(/(?:(\d{4})年)?(\d{1,2})[月\/-](\d{1,2})(?:日|号)?/g)) {
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+    tokens.add(`${month}/${day}`);
+    tokens.add(`${month}月${day}日`);
+    tokens.add(`${month}月${day}号`);
+  }
+  return Array.from(tokens);
+}
+
+function itineraryItems(trip) {
+  const entries = [];
+  function addItems(items, stage) {
+    (items || []).forEach(item => {
+      if (item && typeof item === 'object') entries.push({ stage, item });
+    });
+  }
+  (trip.sections || []).forEach(section => {
+    if (!section || typeof section !== 'object') return;
+    const stage = section.destination || section.title || '';
+    if (section.type === 'timeline') addItems(section.items, stage);
+    (section.children || []).forEach(child => {
+      if (child && (child.type === 'timeline' || child.kind === 'itinerary')) addItems(child.items, stage);
+    });
+  });
+  return entries;
+}
+
+function itineraryForDate(trip, userText) {
+  const requested = normalizedDateTokens(userText);
+  if (!requested.length) return [];
+  return itineraryItems(trip).filter(({ item }) => {
+    const itemTokens = normalizedDateTokens([item.day, item.heading, item.desc].filter(Boolean).join(' '));
+    return requested.some(token => itemTokens.includes(token));
+  });
+}
+
+function buildTripContextSummary(trip) {
+  const meta = trip.meta || {};
+  const places = extractTripPlaces(trip);
+  const pending = pendingBookingItems(trip);
+  const packing = (trip.packing || []).flatMap(group => (group.items || []).map(item => `${group.group || '未分组'} / ${item.name || '未命名'}${item.meta ? `（${item.meta}）` : ''}`));
+  const expenses = expenseSummary(trip);
+  return [
+    `标题：${meta.title || '未命名行程'}`,
+    `日期：${meta.dateLabel || '未设置'}`,
+    `会经过/涉及地点：${places.length ? places.join('、') : '当前行程未明确地点'}`,
+    `未完成预定：${pending.length ? pending.map(item => `${item.group} / ${item.name}${item.meta ? `（${item.meta}）` : ''}`).join('；') : '无'}`,
+    `出行物品：${packing.length ? packing.join('；') : '无'}`,
+    `花销合计：¥${money(expenses.total)}${expenses.byPerson.length ? `；按人：${expenses.byPerson.map(([name, amount]) => `${name} ¥${money(amount)}`).join('，')}` : ''}`
+  ].join('\n');
+}
+
+function answerReadOnlyQuestion(trip, userText) {
+  const text = stripClientChatGuard(userText);
+  if (!text || hasExplicitMutationIntent(text)) return null;
+
+  if (normalizedDateTokens(text).length && /(干嘛|做什么|安排|行程|计划|去哪|去哪里|活动|怎么玩)/.test(text)) {
+    const entries = itineraryForDate(trip, text);
+    if (entries.length) {
+      return entries.map(({ stage, item }) => {
+        const date = item.day ? `${item.day} ` : '';
+        const place = stage ? `【${stage}】` : '';
+        const detail = [item.heading, item.desc].filter(Boolean).join('：');
+        return `${date}${place}${detail || '已有行程安排'}`;
+      }).join('\n');
+    }
+    return null;
+  }
+
+  if (/(经过|途经|会去|去哪|去哪些|什么地方|哪些地方|目的地|路线|城市)/.test(text) && /(地方|地点|目的地|城市|路线|经过|途经|会去|去哪)/.test(text)) {
+    const places = extractTripPlaces(trip);
+    return places.length ? `这次行程会经过/涉及：${places.join('、')}。` : '当前行程里还没有明确的目的地信息。';
+  }
+
+  if (/(未完成|没完成|没有完成|待完成|待办|还没|还没有|哪些没|什么没)/.test(text) && /(预定|预订|清单|订单|门票|住宿|交通|booking)/i.test(text)) {
+    const pending = pendingBookingItems(trip);
+    if (!pending.length) return '目前没有未完成的预定项。';
+    return `还有 ${pending.length} 个未完成预定：${pending.map(item => `${item.group} / ${item.name}${item.meta ? `（${item.meta}）` : ''}`).join('；')}。`;
+  }
+
+  if (/(一共|总共|合计|总花销|花了多少|多少钱|费用|花销)/.test(text) && /(花|钱|费用|花销|合计|总共|一共)/.test(text)) {
+    const summary = expenseSummary(trip);
+    if (!summary.total) return '目前还没有记录花销，所以合计是 0 元。';
+    const people = summary.byPerson.length ? `；按人：${summary.byPerson.map(([name, amount]) => `${name} ¥${money(amount)}`).join('，')}` : '';
+    return `目前已记录花销合计 ¥${money(summary.total)}${people}。`;
+  }
+
+  return null;
+}
+
 function chatSystem(trip) {
   const nowIso = new Date().toISOString();
-  return `你是「行程助手」，帮助用户用自然语言修改一份旅行行程。下面是当前行程的完整 JSON（含所有 id）：
+  return `你是「行程助手」，帮助用户基于当前行程数据进行问答、分析和修改。
+
+当前行程摘要（优先用于回答只读问题）：
+${buildTripContextSummary(trip)}
+
+下面是当前行程的完整 JSON（含所有 id）：
 ${JSON.stringify(trip)}
 
 当前服务器时间：${nowIso}
@@ -718,7 +914,7 @@ ${JSON.stringify(trip)}
 - people[]: 花销同行人 [{id,name}]
 - expenses[]: 花销 [{id,personId,amount,note,time}]
 
-你可以帮用户对以上任意部分做「增、删、改、查」。
+你可以帮用户对以上任意部分做「增、删、改、查」。只读问题必须直接基于当前行程摘要和完整 JSON 回答。
 
 输出必须是严格 JSON（不要 markdown，不要多余文字）：
 {
@@ -754,6 +950,9 @@ ${JSON.stringify(trip)}
 }
 
 规则：
+- 如果最新用户消息只是寒暄、闲聊、感谢、询问、统计、总结、分析、建议、推荐或解释，不涉及系统数据改动，只回答 reply，updatedTrip=null，focus=null，toolCalls=[]。例如用户只说「Hi」「你好」「这次一共花了多少钱」「帮我分析一下行程」，都不要返回任何写工具。
+- 只有最新用户消息明确要求新增、修改、删除、勾选、取消勾选、记录花销、保存或写入数据时，才可以返回 toolCalls 或 updatedTrip。
+- 读取上下文不需要工具：当前完整 trip JSON 已在系统消息里，直接基于它回答用户即可。
 - 「查」类问题（询问、汇总、统计）只回答 reply，updatedTrip=null，focus=null。
 - 所有会修改后端数据的操作都必须经过前端弹窗确认：优先返回 toolCalls，updatedTrip=null。不要在 reply 里声称已经执行。
 - 尽量只使用这 4 个通用写工具：collection.item（booking/packing 增删改/勾选）、expense.item（花销增删改）、trip.timelineItem（具体行程增删改）、trip.hotel（住宿增删改）。无法表达时才返回完整 updatedTrip 交给 trip.replace 兜底确认。
@@ -798,9 +997,76 @@ function expenseCount(trip) {
 function latestUserText(history) {
   for (let index = history.length - 1; index >= 0; index--) {
     const msg = history[index];
-    if (msg && msg.role !== 'assistant') return String(msg.content || '');
+    if (msg && msg.role !== 'assistant') return stripClientChatGuard(msg.content);
   }
   return '';
+}
+
+function stripClientChatGuard(text) {
+  const raw = String(text || '');
+  const marker = '结构定位规则：';
+  const index = raw.indexOf(marker);
+  return (index >= 0 ? raw.slice(0, index) : raw).trim();
+}
+
+function isGreetingOnly(text) {
+  return /^(hi|hello|hey|yo|你好|嗨|哈喽|在吗|早|早上好|上午好|下午好|晚上好)[!！。.~～\s]*$/i.test(String(text || '').trim());
+}
+
+function hasExplicitMutationIntent(text) {
+  const raw = stripClientChatGuard(text);
+  if (!raw) return false;
+  if (looksLikeExpenseAdd(raw)) return true;
+  if (/(添加|新增|增加|加到|加进|加入|加上|加一项|加一个|加个|再加|新建|创建|记录|记一笔|修改|更新|改成|替换|设为|设置为|标记|勾选|取消勾选|删除|删掉|移除|去掉|拿掉|清空|保存|写入|取消预定|取消订单)/.test(raw)) return true;
+  if (/(不需要带|不用带|不要带|别带|取消带)/.test(raw)) return true;
+  if (/(不需要|不用|不要).{0,16}(带|携带|准备|预定|订单|门票|酒店|机票|车票|物品|行李|清单)/.test(raw)) return true;
+  if (/(带|携带|准备|预定|订单|门票|酒店|机票|车票|物品|行李|清单).{0,16}(不需要|不用|不要)/.test(raw)) return true;
+  return false;
+}
+
+function replyImpliesWrite(reply) {
+  return /(准备|确认|执行|弹窗|写入|保存|修改|更新|添加|新增|删除|移除|勾选|记录这笔|应用这次变更)/.test(String(reply || ''));
+}
+
+function readOnlyFallbackReply(userText, reply) {
+  if (reply && !replyImpliesWrite(reply)) return String(reply);
+  if (isGreetingOnly(userText)) return '你好！我在，可以帮你查看和分析当前行程；只有你明确要求新增、修改或删除时，我才会准备写入操作。';
+  return '抱歉，我刚才理解偏了。请再说一次，我会按普通聊天或只读查询回答，不会修改行程数据。';
+}
+
+function needsReadOnlyRetry(history, out) {
+  const userText = latestUserText(history);
+  if (!userText || hasExplicitMutationIntent(userText)) return false;
+  const tools = normalizeToolCalls(out && out.toolCalls);
+  return tools.length > 0 || !!(out && out.updatedTrip) || replyImpliesWrite(out && out.reply);
+}
+
+async function retryReadOnlyChat(messages, trip, userText) {
+  return callOpenAIMessages([
+    ...messages,
+    {
+      role: 'system',
+      content: `纠错：最新用户消息「${userText}」没有要求修改数据。忽略上一次可能的增删改判断，基于当前行程上下文正常回答用户。如果是旅行推荐等开放问题，可以结合常识自然交流。必须返回 updatedTrip=null、focus=null、toolCalls=[]，不要提确认、工具、删除、修改或安全策略。`
+    }
+  ]);
+}
+
+async function processChatLocally(trip, history) {
+  const localReadOnlyAnswer = answerReadOnlyQuestion(trip, latestUserText(history));
+  if (localReadOnlyAnswer) {
+    return { reply: localReadOnlyAnswer, updatedTrip: null, focus: null, toolCalls: [] };
+  }
+
+  const messages = [
+    { role: 'system', content: chatSystem(trip) },
+    ...history.slice(-16).map(m => ({
+      role: m.role === 'assistant' ? 'assistant' : 'user',
+      content: String(m.content || '').slice(0, 4000)
+    }))
+  ];
+  let out = await callOpenAIMessages(messages);
+  if (needsReadOnlyRetry(history, out)) out = await retryReadOnlyChat(messages, trip, latestUserText(history));
+  return buildChatResponse(trip, history, out);
 }
 
 function looksLikeExpenseAdd(text) {
@@ -844,7 +1110,7 @@ function itemNameTokens(item) {
 }
 
 function collectionDeleteToolCallsFromText(trip, text) {
-  const raw = String(text || '');
+  const raw = stripClientChatGuard(text);
   if (!/(不要|不需要|不用|删除|删掉|移除|去掉|拿掉|取消带|别带)/.test(raw)) return [];
   const normalized = compactText(raw);
   const pools = [];
@@ -880,6 +1146,48 @@ function collectionDeleteToolCallsFromText(trip, text) {
   const unique = new Map();
   calls.forEach(call => unique.set(`${call.args.collection}:${call.args.itemId}`, call));
   return Array.from(unique.values());
+}
+
+function buildChatResponse(trip, history, out) {
+  let reply = (out && out.reply) ? String(out.reply) : '（助手暂时没有回复，请重试）';
+  const toolCalls = normalizeToolCalls(out && out.toolCalls);
+  let updatedTrip = out && out.updatedTrip;
+  const userText = latestUserText(history);
+  const hasWriteIntent = hasExplicitMutationIntent(userText);
+  const readOnlyAnswer = answerReadOnlyQuestion(trip, userText);
+
+  if (!hasWriteIntent && readOnlyAnswer) {
+    return { reply: readOnlyAnswer, updatedTrip: null, focus: null, toolCalls: [] };
+  }
+
+  if (!hasWriteIntent) {
+    return {
+      reply: readOnlyFallbackReply(userText, reply),
+      updatedTrip: null,
+      focus: null,
+      toolCalls: []
+    };
+  }
+
+  if (!toolCalls.length && !updatedTrip) {
+    const fallbackDeleteCalls = collectionDeleteToolCallsFromText(trip, userText);
+    if (fallbackDeleteCalls.length) {
+      toolCalls.push(...fallbackDeleteCalls);
+      reply = '我找到了可能要删除的条目，请在弹窗中勾选确认。';
+    }
+  }
+  const focus = out && ['trip', 'booking', 'packing', 'expense'].includes(out.focus) ? out.focus : null;
+  if (!toolCalls.length && updatedTrip && typeof updatedTrip === 'object') {
+    toolCalls.push({
+      action: 'trip.replace',
+      title: '确认应用行程变更',
+      message: '这是暂未细分为专用工具的行程修改，请确认后再写入。你也可以展开 JSON 做高级修改。',
+      args: { updatedTrip: ensureIds(updatedTrip), focus: focus || 'trip' }
+    });
+  }
+  updatedTrip = null;
+
+  return { reply, updatedTrip, focus, toolCalls };
 }
 
 function findPersonByName(trip, name) {
@@ -1167,49 +1475,20 @@ app.http('chatTrip', {
     if (!trip || typeof trip !== 'object') return { status: 400, jsonBody: { error: 'missing trip' } };
     if (!history.length) return { status: 400, jsonBody: { error: 'missing messages' } };
 
+    const localReadOnlyAnswer = answerReadOnlyQuestion(trip, latestUserText(history));
+    if (localReadOnlyAnswer) return { jsonBody: { reply: localReadOnlyAnswer, updatedTrip: null, focus: null, toolCalls: [] } };
+
     try {
       await checkRateLimit(clientIp(req));
     } catch (e) {
       if (e instanceof RateLimitError) return { status: 429, jsonBody: { error: e.message } };
     }
 
-    const messages = [
-      { role: 'system', content: chatSystem(trip) },
-      ...history.slice(-16).map(m => ({
-        role: m.role === 'assistant' ? 'assistant' : 'user',
-        content: String(m.content || '').slice(0, 4000)
-      }))
-    ];
-
-    let out;
     try {
-      out = await callOpenAIMessages(messages);
+      return { jsonBody: await processChatLocally(trip, history) };
     } catch (e) {
       return { status: 502, jsonBody: { error: '助手出错：' + e.message } };
     }
-
-    let reply = (out && out.reply) ? String(out.reply) : '（助手暂时没有回复，请重试）';
-    const toolCalls = normalizeToolCalls(out && out.toolCalls);
-    let updatedTrip = out && out.updatedTrip;
-    if (!toolCalls.length && !updatedTrip) {
-      const fallbackDeleteCalls = collectionDeleteToolCallsFromText(trip, `${latestUserText(history)}\n${reply}`);
-      if (fallbackDeleteCalls.length) {
-        toolCalls.push(...fallbackDeleteCalls);
-        reply = '我找到了可能要删除的条目，请在弹窗中勾选确认。';
-      }
-    }
-    const focus = out && ['trip', 'booking', 'packing', 'expense'].includes(out.focus) ? out.focus : null;
-    if (!toolCalls.length && updatedTrip && typeof updatedTrip === 'object') {
-      toolCalls.push({
-        action: 'trip.replace',
-        title: '确认应用行程变更',
-        message: '这是暂未细分为专用工具的行程修改，请确认后再写入。你也可以展开 JSON 做高级修改。',
-        args: { updatedTrip: ensureIds(updatedTrip), focus: focus || 'trip' }
-      });
-    }
-    updatedTrip = null;
-
-    return { jsonBody: { reply, updatedTrip, focus, toolCalls } };
   }
 });
 
@@ -1249,3 +1528,17 @@ app.http('executeTripTools', {
     return { jsonBody: { reply: messages.join('\n') || '已执行。', updatedTrip: trip, focus } };
   }
 });
+
+module.exports.__test = {
+  answerReadOnlyQuestion,
+  buildTripContextSummary,
+  buildChatResponse,
+  collectionDeleteToolCallsFromText,
+  extractTripPlaces,
+  hasExplicitMutationIntent,
+  itineraryForDate,
+  latestUserText,
+  needsReadOnlyRetry,
+  processChatLocally,
+  stripClientChatGuard
+};

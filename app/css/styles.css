@@ -195,6 +195,43 @@ a { color: inherit; text-decoration: none; }
   padding: 7px 20px; border-radius: 999px; font-weight: 600; backdrop-filter: blur(4px);
 }
 
+/* ============ AI 生成理解说明 ============ */
+.generation-notes {
+  width: min(940px, calc(100% - 32px)); margin: 18px auto 4px; padding: 18px 20px;
+  display: flex; align-items: flex-start; gap: 14px;
+  background: linear-gradient(135deg, rgba(255,255,255,.98), rgba(240,250,246,.96));
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--line));
+  border-radius: 16px; box-shadow: var(--shadow);
+}
+.generation-notes.needs-review { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.generation-notes-icon {
+  width: 38px; height: 38px; flex: 0 0 38px; display: grid; place-items: center;
+  border-radius: 12px; background: color-mix(in srgb, var(--primary) 10%, #fff); font-size: 1.1rem;
+}
+.generation-notes-copy { flex: 1; min-width: 0; }
+.generation-notes-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.generation-notes-kicker { display: block; color: var(--primary); font-size: .72rem; font-weight: 800; letter-spacing: .08em; }
+.generation-notes h2 { font-size: 1.05rem; line-height: 1.35; margin-top: 2px; }
+.generation-notes-status {
+  flex-shrink: 0; padding: 3px 9px; border-radius: 999px; background: color-mix(in srgb, var(--primary) 10%, #fff);
+  color: var(--primary); font-size: .72rem; font-weight: 800;
+}
+.generation-notes.needs-review .generation-notes-status { background: #fff4e8; color: #a75622; }
+.generation-notes-summary { margin-top: 8px; color: var(--muted); font-size: .9rem; }
+.generation-notes ul { margin: 10px 0 0 18px; color: var(--text); font-size: .86rem; }
+.generation-notes li + li { margin-top: 3px; }
+.generation-notes-review { margin-top: 10px; color: #79502f; font-size: .84rem; }
+.generation-notes-chat {
+  margin-top: 10px; padding: 9px 11px; border-radius: 10px;
+  background: color-mix(in srgb, var(--primary) 7%, #fff); color: #3a5850; font-size: .84rem;
+}
+
+@media (max-width: 640px) {
+  .generation-notes { width: calc(100% - 24px); padding: 15px; gap: 10px; }
+  .generation-notes-icon { width: 32px; height: 32px; flex-basis: 32px; }
+  .generation-notes-head { align-items: center; }
+}
+
 .wrap { max-width: 860px; margin: -56px auto 60px; padding: 0 20px; position: relative; z-index: 2; }
 
 .section { margin-top: 32px; }

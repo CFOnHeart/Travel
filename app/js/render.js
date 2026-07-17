@@ -21,6 +21,28 @@ function cleanText(value) {
 }
 
 // ---------- Hero ----------
+function renderGenerationNotes(notes) {
+  if (!notes || typeof notes !== 'object') return '';
+  const decisions = Array.isArray(notes.decisions) ? notes.decisions.filter(Boolean) : [];
+  return `
+    <section class="generation-notes${notes.needsReview ? ' needs-review' : ''}" aria-label="AI 行程整理说明">
+      <div class="generation-notes-icon" aria-hidden="true">✨</div>
+      <div class="generation-notes-copy">
+        <div class="generation-notes-head">
+          <div>
+            <span class="generation-notes-kicker">AI 整理说明</span>
+            <h2>${esc(notes.title || 'AI 已完成行程整理')}</h2>
+          </div>
+          <span class="generation-notes-status">${notes.needsReview ? '建议核对' : '已整理'}</span>
+        </div>
+        ${notes.summary ? `<p class="generation-notes-summary">${esc(notes.summary)}</p>` : ''}
+        ${decisions.length ? `<ul>${decisions.map(item => `<li>${esc(item)}</li>`).join('')}</ul>` : ''}
+        ${notes.reviewHint ? `<p class="generation-notes-review"><b>请留意：</b>${esc(notes.reviewHint)}</p>` : ''}
+        ${notes.chatHint ? `<p class="generation-notes-chat">💬 ${esc(notes.chatHint)}</p>` : ''}
+      </div>
+    </section>`;
+}
+
 export function renderHero(meta = {}) {
   const emoji = Array.isArray(meta.emoji) ? meta.emoji.join('  ') : '';
   return `
@@ -29,7 +51,8 @@ export function renderHero(meta = {}) {
       ${meta.subtitle ? `<p>${esc(meta.subtitle)}</p>` : ''}
       ${meta.dateLabel ? `<div class="dates">${esc(meta.dateLabel)}</div>` : ''}
       ${emoji ? `<div class="hero-emoji" style="position:absolute;bottom:14px;left:0;right:0;font-size:20px;opacity:.35;letter-spacing:18px;text-align:center;">${esc(emoji)}</div>` : ''}
-    </header>`;
+    </header>
+    ${renderGenerationNotes(meta.generationNotes)}`;
 }
 
 // ---------- 各类 section ----------
