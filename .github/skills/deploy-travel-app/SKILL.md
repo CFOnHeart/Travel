@@ -107,14 +107,15 @@ All cases under `api/test/`, including the readable 小白熊行程助手 cases 
 
    # Create zip with '/' paths, not Windows '\\' paths. Linux Functions may index 0 functions with backslash entries.
    $zip = "api-linuxpaths-" + (Get-Date -Format "yyyyMMddHHmmss") + ".zip"
+   Add-Type -AssemblyName System.IO.Compression
    Add-Type -AssemblyName System.IO.Compression.FileSystem
    $source = (Resolve-Path .deploy-api).Path
    $zipPath = Join-Path (Get-Location) $zip
    $archive = [System.IO.Compression.ZipFile]::Open($zipPath, [System.IO.Compression.ZipArchiveMode]::Create)
    try {
      Get-ChildItem -Path $source -Recurse -File | ForEach-Object {
-       $relative = $_.FullName.Substring($source.Length).TrimStart('\','/')
-       $entryName = $relative -replace '\\','/'
+      $relative = $_.FullName.Substring($source.Length).TrimStart([char]92,[char]47)
+      $entryName = $relative.Replace([char]92,[char]47)
        [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($archive, $_.FullName, $entryName, [System.IO.Compression.CompressionLevel]::Optimal) | Out-Null
      }
    } finally { $archive.Dispose() }
