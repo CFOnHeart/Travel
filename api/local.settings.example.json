@@ -1,0 +1,21 @@
+{
+  "IsEncrypted": false,
+  "Host": {
+    "LocalHttpPort": 7071,
+    "CORS": "http://localhost:3000,http://localhost:5173",
+    "CORSCredentials": false
+  },
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "AzureWebJobsFeatureFlags": "EnableWorkerIndexing",
+
+    "AOAI_ENDPOINT": "https://YOUR-RESOURCE.openai.azure.com/",
+    "AOAI_DEPLOYMENT": "YOUR-DEPLOYMENT-NAME",
+    "AOAI_API_KEY": "YOUR-AOAI-KEY",
+    "AOAI_API_VERSION": "2024-12-01-preview",
+
+    "RL_PER_IP_HOUR": "15",
+    "RL_GLOBAL_DAY": "300"
+  }
+}

@@ -32,10 +32,11 @@
   </div>
 
   <!-- 生成加载态 -->
-  <div class="gen-overlay" id="genOverlay">
+  <div class="gen-overlay" id="genOverlay" role="status">
     <div class="spinner"></div>
-    <div class="ov-text">正在解析你的行程…</div>
-    <div class="ov-sub">AI 正在提取航班、住宿、行程与清单，大约需要 10–30 秒</div>
+    <div class="ov-text">正在生成你的行程</div>
+    <ol class="gen-stage-list" id="genStageList" aria-hidden="true"></ol>
+    <div class="ov-sub" id="genOverlaySub" aria-live="polite">AI 正在整理你的行程，请稍候…</div>
   </div>
 
   <script type="module" src="js/home.js"></script>

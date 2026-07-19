@@ -11,7 +11,7 @@ export async function generateTrip(text) {
   const data = await resp.json().catch(() => ({}));
   if (!resp.ok) throw new Error(data.error || `生成失败（${resp.status}）`);
   if (data.trip) data.trip = normalizeTripStructure(data.trip);
-  return data; // { tripId, trip }
+  return data; // { tripId, trip, stages?, generationProfile? }
 }
 
 export async function getTrip(tripId) {

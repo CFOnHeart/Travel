@@ -12,13 +12,24 @@ const { app } = require('@azure/functions');
 const { TableClient } = require('@azure/data-tables');
 const crypto = require('crypto');
 
+// ---- 轻量 logger（输出到 func worker stdout；func 运行时已自动加时间戳前缀，这里不再重复）----
+function _logFmt(level, msg, extra) {
+  const body = extra !== undefined ? ' ' + (typeof extra === 'string' ? extra : JSON.stringify(extra)) : '';
+  return `[trips] [${level}] ${msg}${body}`;
+}
+const logger = {
+  info: (msg, extra) => console.log(_logFmt('info', msg, extra)),
+  warn: (msg, extra) => console.warn(_logFmt('warn', msg, extra)),
+  error: (msg, extra) => console.error(_logFmt('error', msg, extra)),
+};
+
 const conn = process.env.AzureWebJobsStorage;
 const TABLE = 'trips';
 const PK = 'trip';
 
 // Azure OpenAI 配置（存在 Function App 应用设置里，绝不落前端）
 const AOAI_ENDPOINT = process.env.AOAI_ENDPOINT;      // https://xxx.openai.azure.com/
-const AOAI_DEPLOYMENT = process.env.AOAI_DEPLOYMENT;  // gpt-5.4
+const AOAI_DEPLOYMENT = process.env.AOAI_DEPLOYMENT;  // 部署名，由应用设置注入
 const AOAI_API_KEY = process.env.AOAI_API_KEY;
 const AOAI_API_VERSION = process.env.AOAI_API_VERSION || '2024-12-01-preview';
 
@@ -199,6 +210,9 @@ async function callOpenAIMessages(messages, maxTokens) {
     response_format: { type: 'json_object' },
     max_completion_tokens: maxTokens || 8000
   };
+  const inChars = messages.reduce((n, m) => n + (m.content || '').length, 0);
+  logger.info('openai.request', { deployment: AOAI_DEPLOYMENT, messages: messages.length, inChars, maxTokens: maxTokens || 8000 });
+  const t0 = Date.now();
   const resp = await fetch(url, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'api-key': AOAI_API_KEY },
@@ -206,11 +220,16 @@ async function callOpenAIMessages(messages, maxTokens) {
   });
   if (!resp.ok) {
     const errText = await resp.text().catch(() => '');
+    logger.error('openai.error', { status: resp.status, ms: Date.now() - t0, err: errText.slice(0, 200) });
     throw new Error(`OpenAI ${resp.status}: ${errText.slice(0, 500)}`);
   }
   const data = await resp.json();
   const content = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
-  if (!content) throw new Error('OpenAI 返回为空');
+  if (!content) {
+    logger.error('openai.empty', { ms: Date.now() - t0 });
+    throw new Error('OpenAI 返回为空');
+  }
+  logger.info('openai.response', { ms: Date.now() - t0, outChars: content.length });
   return JSON.parse(content);
 }
 
@@ -334,28 +353,92 @@ function attachGenerationNotes(trip, originalText, validation, bestEffort = fals
   return trip;
 }
 
-async function generateValidatedTrip(text) {
-  let trip = ensureIds(await callOpenAI(text));
+// 4 个 stage 的 id/label 是后端响应契约，前端 app/js/home.js 的 GENERATION_STAGES 必须保持一致。
+const GENERATION_STAGE_DEFS = [
+  { id: 'parse', label: '解析行程文本' },
+  { id: 'extract', label: '提取航班与住宿' },
+  { id: 'organize', label: '整理目的地与清单' },
+  { id: 'review', label: '复核结构' },
+];
+
+function buildGenerationStages(path) {
+  const labels = Object.fromEntries(GENERATION_STAGE_DEFS.map(stage => [stage.id, stage.label]));
+  const stage = (id, status) => ({ id, label: labels[id], status });
+  if (path === 'fast') {
+    return [
+      stage('parse', 'done'),
+      stage('extract', 'done'),
+      stage('organize', 'done'),
+      stage('review', 'skipped'),
+    ];
+  }
+  if (path === 'best-effort') {
+    return [
+      stage('parse', 'done'),
+      stage('extract', 'done'),
+      stage('organize', 'done'),
+      stage('review', 'failed'),
+    ];
+  }
+  return GENERATION_STAGE_DEFS.map(def => stage(def.id, 'done'));
+}
+
+function buildGenerationProfile(path, llmCalls) {
+  return { path, llmCalls };
+}
+
+async function generateValidatedTrip(text, deps = {}) {
+  const callOpenAIFn = deps.callOpenAI || callOpenAI;
+  const validateFn = deps.validateGeneratedTrip || validateGeneratedTrip;
+  const repairFn = deps.repairGeneratedTrip || repairGeneratedTrip;
+  const tStart = Date.now();
+
+  let llmCalls = 0;
+  logger.info('generate.start', { textLen: text.length });
+  let trip = ensureIds(await callOpenAIFn(text));
+  llmCalls += 1;
+  logger.info('generate.initial', { ms: Date.now() - tStart, sections: (trip.sections || []).length });
+
+  let localIssues = deterministicIssues(trip);
+  if (!localIssues.length) {
+    const validation = { ok: true, issues: [] };
+    logger.info('generate.done', { path: 'fast', llmCalls, ms: Date.now() - tStart });
+    return {
+      trip: ensureIds(attachGenerationNotes(trip, text, validation, false)),
+      stages: buildGenerationStages('fast'),
+      generationProfile: buildGenerationProfile('fast', llmCalls),
+    };
+  }
+  logger.info('generate.localIssues', { count: localIssues.length, issues: localIssues.slice(0, 5) });
+
   let lastValidation = null;
   let bestEffort = false;
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      lastValidation = await validateGeneratedTrip(text, trip);
+      llmCalls += 1;
+      lastValidation = await validateFn(text, trip);
+      logger.info('generate.validate', { attempt, ok: lastValidation && lastValidation.ok, ms: Date.now() - tStart });
     } catch (error) {
+      logger.error('generate.validate.error', { attempt, err: String(error.message || error).slice(0, 200) });
       bestEffort = true;
       lastValidation = { ok: false, issues: ['自动复核暂时不可用'], repairInstructions: '' };
       break;
     }
-    const localIssues = deterministicIssues(trip);
+    localIssues = deterministicIssues(trip);
     if (lastValidation && lastValidation.ok === true && !localIssues.length) {
-      return ensureIds(attachGenerationNotes(trip, text, lastValidation, false));
+      logger.info('generate.done', { path: 'repaired', llmCalls, attempt, ms: Date.now() - tStart });
+      return {
+        trip: ensureIds(attachGenerationNotes(trip, text, lastValidation, false)),
+        stages: buildGenerationStages('repaired'),
+        generationProfile: buildGenerationProfile('repaired', llmCalls),
+      };
     }
     if (localIssues.length) {
       lastValidation = {
         ok: false,
         issues: [...(Array.isArray(lastValidation && lastValidation.issues) ? lastValidation.issues : []), ...localIssues],
-        repairInstructions: '修复确定性结构问题：' + localIssues.join('；')
+        repairInstructions: '修复确定性结构问题：' + localIssues.join('；'),
       };
     }
     if (attempt === 3) {
@@ -363,14 +446,23 @@ async function generateValidatedTrip(text) {
       break;
     }
     try {
-      trip = ensureIds(await repairGeneratedTrip(text, trip, lastValidation));
+      llmCalls += 1;
+      trip = ensureIds(await repairFn(text, trip, lastValidation));
+      logger.info('generate.repair', { attempt, ms: Date.now() - tStart });
     } catch (error) {
+      logger.error('generate.repair.error', { attempt, err: String(error.message || error).slice(0, 200) });
       bestEffort = true;
       break;
     }
   }
 
-  return ensureIds(attachGenerationNotes(trip, text, lastValidation, bestEffort || !(lastValidation && lastValidation.ok)));
+  const path = bestEffort ? 'best-effort' : 'repaired';
+  logger.warn('generate.done', { path, llmCalls, bestEffort, ms: Date.now() - tStart });
+  return {
+    trip: ensureIds(attachGenerationNotes(trip, text, lastValidation, bestEffort || !(lastValidation && lastValidation.ok))),
+    stages: buildGenerationStages(path),
+    generationProfile: buildGenerationProfile(path, llmCalls),
+  };
 }
 
 const DESTINATION_NAMES = ['西双版纳', '丽江', '泸沽湖', '昆明', '大理', '香格里拉', '玉龙雪山'];
@@ -677,26 +769,31 @@ function ensureIds(trip) {
 app.http('generateTrip', {
   methods: ['POST'], authLevel: 'anonymous', route: 'trips/generate',
   handler: async (req) => {
+    const tStart = Date.now();
+    const ip = clientIp(req);
     let b;
-    try { b = await req.json(); } catch { return { status: 400, jsonBody: { error: 'invalid json' } }; }
+    try { b = await req.json(); } catch { logger.warn('generateTrip.badJson', { ip }); return { status: 400, jsonBody: { error: 'invalid json' } }; }
     const text = (b && b.text || '').toString().trim();
-    if (text.length < 10) return { status: 400, jsonBody: { error: '行程描述太短' } };
-    if (text.length > 8000) return { status: 400, jsonBody: { error: '行程描述过长（上限 8000 字）' } };
+    if (text.length < 10) { logger.warn('generateTrip.tooShort', { ip, len: text.length }); return { status: 400, jsonBody: { error: '行程描述太短' } }; }
+    if (text.length > 8000) { logger.warn('generateTrip.tooLong', { ip, len: text.length }); return { status: 400, jsonBody: { error: '行程描述过长（上限 8000 字）' } }; }
+    logger.info('generateTrip.request', { ip, textLen: text.length });
 
     // 限流 / 成本保护
     try {
-      await checkRateLimit(clientIp(req));
+      await checkRateLimit(ip);
     } catch (e) {
-      if (e instanceof RateLimitError) return { status: 429, jsonBody: { error: e.message } };
-      // 限流器自身异常不阻断
+      if (e instanceof RateLimitError) { logger.warn('generateTrip.rateLimited', { ip, msg: e.message }); return { status: 429, jsonBody: { error: e.message } }; }
+      logger.warn('generateTrip.ratelimitError', { ip, err: String(e.message || e).slice(0, 200) });
     }
 
-    let trip;
+    let generated;
     try {
-      trip = await generateValidatedTrip(text);
+      generated = await generateValidatedTrip(text);
     } catch (e) {
+      logger.error('generateTrip.fail', { ip, ms: Date.now() - tStart, err: String(e.message || e).slice(0, 500) });
       return { status: 502, jsonBody: { error: '解析失败：' + e.message } };
     }
+    const trip = generated.trip;
     trip.version = 1;
 
     const tripId = newTripId();
@@ -707,7 +804,14 @@ app.http('generateTrip', {
       createdAt: new Date().toISOString()
     }, 'Replace');
 
-    return { jsonBody: { tripId, trip } };
+    logger.info('generateTrip.done', { tripId, ip, path: generated.generationProfile && generated.generationProfile.path, llmCalls: generated.generationProfile && generated.generationProfile.llmCalls, ms: Date.now() - tStart });
+    return {
+      jsonBody: {
+        tripId,
+        trip,
+        stages: generated.stages,
+      }
+    };
   }
 });
 
@@ -1466,27 +1570,34 @@ function executeToolCall(trip, call) {
 app.http('chatTrip', {
   methods: ['POST'], authLevel: 'anonymous', route: 'trips/{tripId}/chat',
   handler: async (req) => {
+    const tStart = Date.now();
     const id = req.params.tripId;
-    if (!id) return { status: 400, jsonBody: { error: 'missing tripId' } };
+    const ip = clientIp(req);
+    if (!id) { logger.warn('chatTrip.noId', { ip }); return { status: 400, jsonBody: { error: 'missing tripId' } }; }
     let b;
-    try { b = await req.json(); } catch { return { status: 400, jsonBody: { error: 'invalid json' } }; }
+    try { b = await req.json(); } catch { logger.warn('chatTrip.badJson', { ip, id }); return { status: 400, jsonBody: { error: 'invalid json' } }; }
     const trip = ensureIds(b && b.trip);
     const history = Array.isArray(b && b.messages) ? b.messages : [];
-    if (!trip || typeof trip !== 'object') return { status: 400, jsonBody: { error: 'missing trip' } };
-    if (!history.length) return { status: 400, jsonBody: { error: 'missing messages' } };
+    if (!trip || typeof trip !== 'object') { logger.warn('chatTrip.noTrip', { ip, id }); return { status: 400, jsonBody: { error: 'missing trip' } }; }
+    if (!history.length) { logger.warn('chatTrip.noHistory', { ip, id }); return { status: 400, jsonBody: { error: 'missing messages' } }; }
+    logger.info('chatTrip.request', { id, ip, historyLen: history.length, userText: String(latestUserText(history) || '').slice(0, 80) });
 
     const localReadOnlyAnswer = answerReadOnlyQuestion(trip, latestUserText(history));
-    if (localReadOnlyAnswer) return { jsonBody: { reply: localReadOnlyAnswer, updatedTrip: null, focus: null, toolCalls: [] } };
+    if (localReadOnlyAnswer) { logger.info('chatTrip.readOnly', { id, ms: Date.now() - tStart }); return { jsonBody: { reply: localReadOnlyAnswer, updatedTrip: null, focus: null, toolCalls: [] } }; }
 
     try {
-      await checkRateLimit(clientIp(req));
+      await checkRateLimit(ip);
     } catch (e) {
-      if (e instanceof RateLimitError) return { status: 429, jsonBody: { error: e.message } };
+      if (e instanceof RateLimitError) { logger.warn('chatTrip.rateLimited', { id, ip, msg: e.message }); return { status: 429, jsonBody: { error: e.message } }; }
+      logger.warn('chatTrip.ratelimitError', { id, ip, err: String(e.message || e).slice(0, 200) });
     }
 
     try {
-      return { jsonBody: await processChatLocally(trip, history) };
+      const out = await processChatLocally(trip, history);
+      logger.info('chatTrip.done', { id, ip, hasToolCalls: !!(out && out.toolCalls && out.toolCalls.length), ms: Date.now() - tStart });
+      return { jsonBody: out };
     } catch (e) {
+      logger.error('chatTrip.fail', { id, ip, ms: Date.now() - tStart, err: String(e.message || e).slice(0, 500) });
       return { status: 502, jsonBody: { error: '助手出错：' + e.message } };
     }
   }
@@ -1496,14 +1607,17 @@ app.http('chatTrip', {
 app.http('executeTripTools', {
   methods: ['POST'], authLevel: 'anonymous', route: 'trips/{tripId}/tools/execute',
   handler: async (req) => {
+    const tStart = Date.now();
     const id = req.params.tripId;
-    if (!id) return { status: 400, jsonBody: { error: 'missing tripId' } };
+    const ip = clientIp(req);
+    if (!id) { logger.warn('execTools.noId', { ip }); return { status: 400, jsonBody: { error: 'missing tripId' } }; }
     let b;
-    try { b = await req.json(); } catch { return { status: 400, jsonBody: { error: 'invalid json' } }; }
+    try { b = await req.json(); } catch { logger.warn('execTools.badJson', { ip, id }); return { status: 400, jsonBody: { error: 'invalid json' } }; }
     let trip = ensureIds(b && b.trip);
     const toolCalls = normalizeToolCalls(b && b.toolCalls);
-    if (!trip || typeof trip !== 'object') return { status: 400, jsonBody: { error: 'missing trip' } };
-    if (!toolCalls.length) return { status: 400, jsonBody: { error: 'missing toolCalls' } };
+    if (!trip || typeof trip !== 'object') { logger.warn('execTools.noTrip', { ip, id }); return { status: 400, jsonBody: { error: 'missing trip' } }; }
+    if (!toolCalls.length) { logger.warn('execTools.noCalls', { ip, id }); return { status: 400, jsonBody: { error: 'missing toolCalls' } }; }
+    logger.info('execTools.request', { id, ip, calls: toolCalls.length, ops: toolCalls.map(c => c && c.operation).filter(Boolean) });
 
     const messages = [];
     let focus = null;
@@ -1515,6 +1629,7 @@ app.http('executeTripTools', {
         if (result.focus) focus = result.focus;
       }
     } catch (e) {
+      logger.error('execTools.fail', { id, ip, err: String(e.message || e).slice(0, 300) });
       return { status: 400, jsonBody: { error: e.message } };
     }
 
@@ -1525,6 +1640,7 @@ app.http('executeTripTools', {
       updatedAt: new Date().toISOString()
     }, 'Merge');
 
+    logger.info('execTools.done', { id, ip, msgs: messages.length, ms: Date.now() - tStart });
     return { jsonBody: { reply: messages.join('\n') || '已执行。', updatedTrip: trip, focus } };
   }
 });
@@ -1532,9 +1648,12 @@ app.http('executeTripTools', {
 module.exports.__test = {
   attachGenerationNotes,
   answerReadOnlyQuestion,
+  buildGenerationProfile,
+  buildGenerationStages,
   buildTripContextSummary,
   buildChatResponse,
   collectionDeleteToolCallsFromText,
+  deterministicIssues,
   executeToolCall,
   extractTripPlaces,
   generateValidatedTrip,

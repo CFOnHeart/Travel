@@ -8,6 +8,7 @@ _topdf.js
 # Node / Azure Functions
 node_modules/
 api/local.settings.json
+.env.local
 .azure/
 bin/
 obj/

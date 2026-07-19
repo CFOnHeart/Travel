@@ -770,6 +770,17 @@ footer { text-align: center; color: var(--muted); font-size: .84rem; padding: 26
 @keyframes spin { to { transform: rotate(360deg); } }
 .gen-overlay .ov-text { color: var(--primary); font-weight: 700; }
 .gen-overlay .ov-sub { color: var(--muted); font-size: .86rem; }
+.gen-stage-list { list-style: none; width: min(360px, 100%); margin: 4px 0 0; padding: 0; display: grid; gap: 8px; text-align: left; }
+.gen-stage { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: .88rem; transition: color .2s ease; }
+.gen-stage-dot { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--line); flex-shrink: 0; background: #fff; }
+.gen-stage.active { color: var(--primary); font-weight: 700; }
+.gen-stage.active .gen-stage-dot { border-color: var(--primary); background: var(--primary); box-shadow: 0 0 0 4px rgba(14,122,95,.12); }
+.gen-stage.done { color: #3a5850; }
+.gen-stage.done .gen-stage-dot { border-color: var(--primary); background: var(--primary); }
+.gen-stage.skipped { color: var(--muted); opacity: .75; }
+.gen-stage.skipped .gen-stage-dot { border-style: dashed; background: transparent; }
+.gen-stage.failed { color: #b5495b; }
+.gen-stage.failed .gen-stage-dot { border-color: #b5495b; background: #b5495b; }
 
 /* ---- 编辑器（右侧抽屉）---- */
 .editor-mask { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 150; display: none; }
