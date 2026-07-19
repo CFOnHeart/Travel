@@ -111,10 +111,15 @@ const apiServer = http.createServer(async (req, res) => {
       const body = await readJson(req);
       const text = String(body.text || '').trim();
       if (text.length < 10) return json(res, 400, { error: '行程描述太短' });
-      const trip = await __test.generateValidatedTrip(text);
+      const generated = await __test.generateValidatedTrip(text);
       const tripId = `local-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
-      localTrips.set(tripId, trip);
-      return json(res, 200, { tripId, trip, localBackend: true });
+      localTrips.set(tripId, generated.trip);
+      return json(res, 200, {
+        tripId,
+        trip: generated.trip,
+        stages: generated.stages,
+        localBackend: true,
+      });
     }
 
     const match = url.pathname.match(/^\/api\/trips\/([^/]+)(?:\/(chat|save|tools\/execute))?$/);
@@ -183,8 +188,11 @@ const staticServer = http.createServer(async (req, res) => {
     if (!filePath.startsWith(root)) return send(res, 403, 'Forbidden');
     let body = await fs.readFile(filePath);
     const ext = path.extname(filePath).toLowerCase();
-    if (filePath.endsWith(path.join('app', 'js', 'config.js'))) {
-      body = Buffer.from(body.toString('utf8').replace(/https:\/\/func-yntravel-ue8266\.azurewebsites\.net\/api/g, localApi), 'utf8');
+    // Inject runtime API base for app pages so config.js picks up local API without file edits.
+    if (ext === '.html' && filePath.startsWith(path.join(root, 'app'))) {
+      const safeBase = JSON.stringify(localApi).replace(/</g, '\\u003c');
+      const inject = `<script>window.__TRAVEL_API_BASE__=${safeBase};</script>`;
+      body = Buffer.from(body.toString('utf8').replace(/<head(\s[^>]*)?>/i, `<head$1>${inject}`), 'utf8');
     }
     send(res, 200, body, { 'content-type': types.get(ext) || 'application/octet-stream' });
   } catch (error) {

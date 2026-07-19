@@ -1,0 +1,8 @@
+{
+  "cleanUrls": false,
+  "rewrites": [
+    { "source": "/", "destination": "/index.html" },
+    { "source": "/trip", "destination": "/trip.html" },
+    { "source": "/trip-collections", "destination": "/trip-collections/index.html" }
+  ]
+}
