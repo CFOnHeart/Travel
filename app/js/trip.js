@@ -408,8 +408,10 @@ function initShare() {
   $('#shareBtn').addEventListener('click', async () => {
     try {
       await navigator.clipboard.writeText(location.href);
-      const b = $('#shareBtn'); const old = b.textContent;
-      b.textContent = '✅ 已复制'; setTimeout(() => b.textContent = old, 1500);
+      const b = $('#shareBtn');
+      const oldHtml = b.innerHTML;
+      b.textContent = '✅ 已复制';
+      setTimeout(() => { b.innerHTML = oldHtml; }, 1500);
     } catch { alert('复制失败，请手动复制地址栏链接'); }
   });
 }
