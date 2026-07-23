@@ -20,6 +20,8 @@ const tripId = params.get('trip');
 
 let trip = null;
 let saveTimer = null;
+const expenseTableState = new Map();
+const expandedExpenseTables = new Set();
 
 function showOverlay(text) {
   $('#loadText').textContent = text;
@@ -264,7 +266,27 @@ function buildBoard(people, expenses) {
 
 function buildExpenseTables(people, ledger) {
   const names = Object.fromEntries(people.map(person => [person.id, person.name || '未命名']));
-  const chronological = [...ledger.rows].sort((a, b) => new Date(a.time) - new Date(b.time));
+  const sortedExpenses = (items, tableId, expenseOf = item => item) => {
+    const state = expenseTableState.get(tableId) || { key: 'time', direction: 'asc' };
+    const factor = state.direction === 'asc' ? 1 : -1;
+    return [...items].sort((left, right) => {
+      const a = expenseOf(left);
+      const b = expenseOf(right);
+      const primary = state.key === 'amount'
+        ? (Number(a.amount) || 0) - (Number(b.amount) || 0)
+        : (new Date(a.time).getTime() || 0) - (new Date(b.time).getTime() || 0);
+      return factor * (primary || String(a.id || '').localeCompare(String(b.id || '')));
+    });
+  };
+  const sortButton = (tableId, key, label) => {
+    const state = expenseTableState.get(tableId) || { key: 'time', direction: 'asc' };
+    const active = state.key === key;
+    const icon = active ? (state.direction === 'asc' ? '↑' : '↓') : '↕';
+    const ariaSort = active ? (state.direction === 'asc' ? 'ascending' : 'descending') : 'none';
+    return `<button class="expense-sort-btn ${active ? 'active' : ''}" type="button" data-table-id="${esc(tableId)}" data-sort-key="${key}" aria-label="按${label}${active && state.direction === 'asc' ? '逆序' : '正序'}排列" aria-sort="${ariaSort}">${label}<span aria-hidden="true">${icon}</span></button>`;
+  };
+  const allTableId = 'all';
+  const chronological = sortedExpenses(ledger.rows, allTableId);
   const detailRows = chronological.map(expense => `<tr>
     <td>${esc(fmtTime(expense.time))}</td><td>${esc(expense.note || '未填写说明')}</td>
     <td>${esc(names[expense.payerId] || '未知')}</td>
@@ -273,12 +295,26 @@ function buildExpenseTables(people, ledger) {
   </tr>`).join('');
   const personTables = people.map(person => {
     const stat = ledger.stats[person.id];
-    const rows = stat.orders.map(order => `<tr><td>${esc(fmtTime(order.expense.time))}</td><td class="expense-order-cell"><span>${esc(order.expense.note || '未填写说明')}</span><button class="expense-edit-btn" type="button" data-expense-id="${esc(order.expense.id)}">编辑</button></td><td class="money">¥${fmtMoney(order.expense.amount)}</td><td>${esc(names[order.expense.payerId] || '未知')}</td><td class="money">¥${fmtMoney(order.share)}</td></tr>`).join('');
-    return `<section class="person-exp-table"><header><div><span>个人账单</span><h3>${esc(person.name || '未命名')}</h3></div><div class="person-exp-totals"><b>实际付款 ¥${fmtMoney(stat.paid)}</b><b>实际花销 ¥${fmtMoney(stat.owed)}</b></div></header>
-      <div class="exp-table-scroll"><table><thead><tr><th>时间</th><th>订单</th><th>订单金额</th><th>付款人</th><th>自己承担</th></tr></thead><tbody>${rows || '<tr><td colspan="5" class="empty-cell">尚未参与任何订单</td></tr>'}</tbody></table></div></section>`;
+    const tableId = `person-${person.id}`;
+    const rows = sortedExpenses(stat.orders, tableId, order => order.expense).map(order => `<tr><td>${esc(fmtTime(order.expense.time))}</td><td class="expense-order-cell"><span>${esc(order.expense.note || '未填写说明')}</span><button class="expense-edit-btn" type="button" data-expense-id="${esc(order.expense.id)}">编辑</button></td><td class="money">¥${fmtMoney(order.expense.amount)}</td><td>${esc(names[order.expense.payerId] || '未知')}</td><td class="money">¥${fmtMoney(order.share)}</td></tr>`).join('');
+    return `<details class="person-exp-table" data-table-id="${esc(tableId)}" ${expandedExpenseTables.has(tableId) ? 'open' : ''}><summary><div class="expense-table-title"><span class="expense-disclosure" aria-hidden="true">›</span><div><span>个人账单 · ${stat.orders.length} 笔</span><h3>${esc(person.name || '未命名')}</h3></div></div><div class="person-exp-totals"><b>实际付款 ¥${fmtMoney(stat.paid)}</b><b>实际花销 ¥${fmtMoney(stat.owed)}</b></div></summary>
+      <div class="exp-table-scroll"><table><thead><tr><th>${sortButton(tableId, 'time', '时间')}</th><th>订单</th><th>${sortButton(tableId, 'amount', '订单金额')}</th><th>付款人</th><th>自己承担</th></tr></thead><tbody>${rows || '<tr><td colspan="5" class="empty-cell">尚未参与任何订单</td></tr>'}</tbody></table></div></details>`;
   }).join('');
   const transfers = settlementTransfers(people, ledger.rows).map(item => `<li><b>${esc(names[item.fromId])}</b><span>支付给</span><b>${esc(names[item.toId])}</b><strong>¥${fmtMoney(item.amount)}</strong></li>`).join('');
-  $('#expTablesView').innerHTML = `<section class="expense-table-card"><header><span>全部流水</span><h3>按时间顺序</h3></header><div class="exp-table-scroll"><table><thead><tr><th>时间</th><th>消费</th><th>付款人</th><th>承担人与金额</th><th>总额</th><th></th></tr></thead><tbody>${detailRows || '<tr><td colspan="6" class="empty-cell">还没有花销记录</td></tr>'}</tbody></table></div></section>${personTables}<section class="expense-table-card settlement-card"><header><span>建议结算</span><h3>最少转账方案</h3></header><ul>${transfers || '<li class="settled">当前所有人的账目已平衡</li>'}</ul></section>`;
+  $('#expTablesView').innerHTML = `<details class="expense-table-card" data-table-id="${allTableId}" ${expandedExpenseTables.has(allTableId) ? 'open' : ''}><summary><div class="expense-table-title"><span class="expense-disclosure" aria-hidden="true">›</span><div><span>全部流水 · ${ledger.rows.length} 笔</span><h3>所有消费明细</h3></div></div><small>点击展开</small></summary><div class="exp-table-scroll"><table><thead><tr><th>${sortButton(allTableId, 'time', '时间')}</th><th>消费</th><th>付款人</th><th>承担人与金额</th><th>${sortButton(allTableId, 'amount', '总额')}</th><th></th></tr></thead><tbody>${detailRows || '<tr><td colspan="6" class="empty-cell">还没有花销记录</td></tr>'}</tbody></table></div></details>${personTables}<section class="expense-table-card settlement-card"><header><span>建议结算</span><h3>最少转账方案</h3></header><ul>${transfers || '<li class="settled">当前所有人的账目已平衡</li>'}</ul></section>`;
+  $$('#expTablesView details[data-table-id]').forEach(details => details.addEventListener('toggle', () => {
+    if (details.open) expandedExpenseTables.add(details.dataset.tableId);
+    else expandedExpenseTables.delete(details.dataset.tableId);
+  }));
+  $$('#expTablesView .expense-sort-btn').forEach(button => button.addEventListener('click', event => {
+    event.preventDefault();
+    event.stopPropagation();
+    const tableId = button.dataset.tableId;
+    const current = expenseTableState.get(tableId) || { key: 'time', direction: 'asc' };
+    expenseTableState.set(tableId, { key: button.dataset.sortKey, direction: current.key === button.dataset.sortKey && current.direction === 'asc' ? 'desc' : 'asc' });
+    expandedExpenseTables.add(tableId);
+    buildExpenseTables(people, ledger);
+  }));
   $$('#expTablesView .expense-edit-btn').forEach(button => button.addEventListener('click', () => openExpModal(button.dataset.expenseId)));
 }
 
