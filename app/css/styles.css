@@ -916,6 +916,85 @@ details[open] > summary .expense-disclosure { transform: rotate(90deg); backgrou
   .exp-participant-list { grid-template-columns: 1fr; }
 }
 
+/* Expense workspace · Airbnb-inspired warm consumer ledger */
+#mpanel-expense {
+  --expense-coral: #ff385c;
+  --expense-coral-dark: #e00b41;
+  --expense-ink: #222222;
+  --expense-body: #3f3f3f;
+  --expense-muted: #6a6a6a;
+  --expense-line: #dddddd;
+  --expense-soft: #f7f7f7;
+  color: var(--expense-ink);
+  font-family: "Airbnb Cereal VF", Circular, "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+}
+#mpanel-expense .exp-head { margin: 6px auto 24px; }
+#mpanel-expense .exp-head h2 { color: var(--expense-ink); font-size: clamp(1.55rem, 3vw, 2rem); font-weight: 600; letter-spacing: -.025em; }
+#mpanel-expense .exp-head p { color: var(--expense-muted); font-size: .95rem; }
+#mpanel-expense .exp-viewer-row {
+  justify-content: flex-start; margin: 0 0 20px; padding: 14px; border: 1px solid var(--expense-line);
+  border-radius: 999px; background: #fff; box-shadow: 0 4px 14px rgba(0,0,0,.05);
+}
+#mpanel-expense .exp-viewer-row label { margin-left: 6px; color: var(--expense-muted); font-weight: 500; }
+#mpanel-expense .exp-viewer-row select { border-color: transparent; border-radius: 999px; background: var(--expense-soft); font-weight: 600; }
+#mpanel-expense .exp-viewer-row .tool-btn { border-radius: 999px; box-shadow: none; font-weight: 600; }
+#mpanel-expense .exp-summary-grid { gap: 14px; margin: 0 0 18px; }
+#mpanel-expense .exp-summary-card {
+  position: relative; padding: 20px; border-color: #ebebeb; border-radius: 16px; box-shadow: none; overflow: hidden;
+}
+#mpanel-expense .exp-summary-card::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: #ebebeb; }
+#mpanel-expense .exp-summary-card.positive::before { background: #168a35; }
+#mpanel-expense .exp-summary-card.negative::before { background: var(--expense-coral); }
+#mpanel-expense .exp-summary-card span { color: var(--expense-muted); font-weight: 500; letter-spacing: 0; }
+#mpanel-expense .exp-summary-card strong { color: var(--expense-ink); font-weight: 600; letter-spacing: -.025em; }
+#mpanel-expense .exp-hint { border: 0; border-radius: 14px; background: #fff7f3; color: #78492e; }
+#mpanel-expense .exp-view-tabs { border-radius: 999px; background: var(--expense-soft); }
+#mpanel-expense .exp-view-tabs button { min-width: 112px; border-radius: 999px; color: var(--expense-muted); font-weight: 500; }
+#mpanel-expense .exp-view-tabs button.active { color: #fff; background: var(--expense-ink); box-shadow: none; }
+#mpanel-expense .expense-table-card, #mpanel-expense .person-exp-table { border-color: var(--expense-line); border-radius: 16px; box-shadow: none; }
+#mpanel-expense .expense-table-card > summary:hover, #mpanel-expense .person-exp-table > summary:hover { background: var(--expense-soft); }
+#mpanel-expense .expense-disclosure { background: var(--expense-soft); color: var(--expense-ink); }
+#mpanel-expense details[open] > summary .expense-disclosure { background: var(--expense-ink); }
+#mpanel-expense .exp-table-scroll th { color: var(--expense-muted); background: var(--expense-soft); font-weight: 500; }
+#mpanel-expense .exp-table-scroll td { color: var(--expense-body); border-color: #ebebeb; }
+#mpanel-expense .exp-table-scroll tbody tr { transition: background .15s; }
+#mpanel-expense .exp-table-scroll tbody tr:hover { background: #fff8fa; }
+#mpanel-expense .exp-table-scroll .money { color: var(--expense-ink); font-weight: 600; }
+#mpanel-expense .expense-sort-btn { font-weight: 600; }
+#mpanel-expense .expense-sort-btn:hover, #mpanel-expense .expense-sort-btn:focus-visible { color: var(--expense-coral-dark); background: #fff0f3; }
+#mpanel-expense .expense-sort-btn.active, #mpanel-expense .expense-sort-btn.active span { color: var(--expense-coral-dark); }
+#mpanel-expense .expense-edit-btn,
+#mpanel-expense .e-actions button {
+  display: inline-grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 50%;
+  background: transparent; color: var(--expense-muted); font: inherit; font-size: 1rem; cursor: pointer; transition: color .15s, background .15s;
+}
+#mpanel-expense .expense-edit-btn:hover, #mpanel-expense .expense-edit-btn:focus-visible,
+#mpanel-expense .e-actions .e-edit:hover, #mpanel-expense .e-actions .e-edit:focus-visible { color: var(--expense-ink); background: var(--expense-soft); outline: none; }
+#mpanel-expense .e-actions { position: absolute; z-index: 3; top: 6px; right: 6px; display: flex; gap: 2px; opacity: 0; transition: opacity .15s; }
+#mpanel-expense .e-card:hover .e-actions, #mpanel-expense .e-card:focus-within .e-actions { opacity: 1; }
+#mpanel-expense .e-actions .e-del:hover, #mpanel-expense .e-actions .e-del:focus-visible { color: var(--expense-coral-dark); background: #fff0f3; outline: none; }
+#mpanel-expense .e-card {
+  min-height: 74px; padding: 10px 12px; border-color: #ebebeb; border-radius: 14px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.06); transition: border-color .15s, box-shadow .15s;
+}
+#mpanel-expense .e-card:hover { border-color: #c1c1c1; box-shadow: 0 8px 20px rgba(0,0,0,.09); }
+#mpanel-expense .e-card .e-amt { color: var(--expense-ink); font-weight: 600; }
+#mpanel-expense .e-card .e-note { color: var(--expense-body); font-weight: 500; }
+#mpanel-expense .e-card .e-time, #mpanel-expense .e-card .e-shares { color: var(--expense-muted); }
+#mpanel-expense .exp-lane::before { width: 1px; background: #dddddd; opacity: 1; animation: none; }
+#mpanel-expense .exp-dot-item .dot { border-color: var(--expense-coral); box-shadow: 0 0 0 4px #fff0f3; animation: none; }
+#mpanel-expense .exp-gridlines .gl { border-color: #ebebeb; }
+#mpanel-expense .p-head { border-color: #ebebeb; border-radius: 16px; box-shadow: none; }
+#mpanel-expense .p-head .p-total { color: var(--expense-coral-dark); font-weight: 600; }
+#mpanel-expense .add-exp { border: 0; border-radius: 999px; background: #fff0f3; color: var(--expense-coral-dark); font-weight: 600; }
+#mpanel-expense .settlement-card strong { color: var(--expense-coral-dark); }
+.exp-custom-splits[hidden] { display: none !important; }
+
+@media (max-width: 760px) {
+  #mpanel-expense .exp-viewer-row { align-items: stretch; border-radius: 18px; }
+  #mpanel-expense .e-actions { opacity: 1; }
+}
+
 /* ============ 小白熊聊天助手 ============ */
 .chat-fab {
   position: fixed; right: 22px; bottom: 22px; z-index: 130;

@@ -22,6 +22,9 @@ let trip = null;
 let saveTimer = null;
 const expenseTableState = new Map();
 const expandedExpenseTables = new Set();
+let currentExpenseView = 'timeline';
+let pendingExpenseScrollY = null;
+let expenseModalScrollY = null;
 
 function showOverlay(text) {
   $('#loadText').textContent = text;
@@ -41,6 +44,8 @@ function renderAll() {
 }
 
 function renderExpense() {
+  const restoreScrollY = pendingExpenseScrollY;
+  pendingExpenseScrollY = null;
   const people = trip.people = trip.people || [];
   const expenses = trip.expenses = trip.expenses || [];
   const ledger = expenseLedger(people, expenses);
@@ -66,11 +71,11 @@ function renderExpense() {
     </div>
     <div class="exp-hint">💡 历史花销未设置承担人时，默认只由付款人自己承担；点击时间序列订单或表格中的「编辑」可补充实际参与人。</div>
     <div class="exp-view-tabs" role="tablist">
-      <button class="active" type="button" data-exp-view="timeline">时间序列</button>
-      <button type="button" data-exp-view="tables">表格明细</button>
+      <button class="${currentExpenseView === 'timeline' ? 'active' : ''}" type="button" data-exp-view="timeline">时间序列</button>
+      <button class="${currentExpenseView === 'tables' ? 'active' : ''}" type="button" data-exp-view="tables">表格明细</button>
     </div>
-    <div id="expTimelineView" class="exp-view-panel active"><div id="expBoard"></div></div>
-    <div id="expTablesView" class="exp-view-panel"></div>`;
+    <div id="expTimelineView" class="exp-view-panel ${currentExpenseView === 'timeline' ? 'active' : ''}"><div id="expBoard"></div></div>
+    <div id="expTablesView" class="exp-view-panel ${currentExpenseView === 'tables' ? 'active' : ''}"></div>`;
 
   $('#addPersonBtn').addEventListener('click', addPerson);
   $('#addExpenseBtn').addEventListener('click', () => { expModalPerson = selectedId; openExpModal(); });
@@ -86,6 +91,7 @@ function renderExpense() {
   }
   buildBoard(people, ledger.rows);
   buildExpenseTables(people, ledger);
+  if (restoreScrollY !== null) requestAnimationFrame(() => window.scrollTo({ top: restoreScrollY, behavior: 'auto' }));
 }
 
 function summaryCard(label, value, hint, tone = '') {
@@ -93,6 +99,7 @@ function summaryCard(label, value, hint, tone = '') {
 }
 
 function switchExpenseView(view) {
+  currentExpenseView = view === 'tables' ? 'tables' : 'timeline';
   $$('.exp-view-tabs button').forEach(button => button.classList.toggle('active', button.dataset.expView === view));
   $('#expTimelineView').classList.toggle('active', view === 'timeline');
   $('#expTablesView').classList.toggle('active', view === 'tables');
@@ -212,8 +219,9 @@ function buildBoard(people, expenses) {
         const participantNames = e.allocations.map(allocation => (people.find(person => person.id === allocation.personId) || {}).name).filter(Boolean);
         item.innerHTML =
           '<span class="dot"></span>' +
-          `<button class="e-edit" type="button" title="编辑${esc(e.note || '这笔花销')}">编辑</button>` +
-          '<div class="e-card"><button class="e-del" type="button" title="删除">✕</button>' +
+          '<div class="e-card"><div class="e-actions">' +
+          `<button class="e-edit" type="button" title="编辑${esc(e.note || '这笔花销')}" aria-label="编辑${esc(e.note || '这笔花销')}">✎</button>` +
+          '<button class="e-del" type="button" title="删除" aria-label="删除这笔花销">×</button></div>' +
           `<div class="e-amt">¥${fmtMoney(e.amount)}</div>` +
           (e.note ? `<div class="e-note">${esc(e.note)}</div>` : '') +
           `<div class="e-shares">承担：${esc(participantNames.join('、') || '待确认')}</div>` +
@@ -223,7 +231,7 @@ function buildBoard(people, expenses) {
           renderExpense();
           queueSave();
         });
-        item.querySelector('.e-edit').addEventListener('click', () => openExpModal(e.id));
+        item.querySelector('.e-edit').addEventListener('click', event => { event.stopPropagation(); openExpModal(e.id); });
         item.querySelector('.e-card').addEventListener('click', event => {
           if (!event.target.closest('.e-del')) openExpModal(e.id);
         });
@@ -291,12 +299,12 @@ function buildExpenseTables(people, ledger) {
     <td>${esc(fmtTime(expense.time))}</td><td>${esc(expense.note || '未填写说明')}</td>
     <td>${esc(names[expense.payerId] || '未知')}</td>
     <td>${expense.allocations.map(item => `${esc(names[item.personId] || '未知')} ¥${fmtMoney(item.amount)}`).join('<br>')}</td>
-    <td class="money">¥${fmtMoney(expense.amount)}</td><td><button class="expense-edit-btn" type="button" data-expense-id="${esc(expense.id)}">编辑</button></td>
+    <td class="money">¥${fmtMoney(expense.amount)}</td><td><button class="expense-edit-btn" type="button" data-expense-id="${esc(expense.id)}" aria-label="编辑${esc(expense.note || '这笔花销')}" title="编辑">✎</button></td>
   </tr>`).join('');
   const personTables = people.map(person => {
     const stat = ledger.stats[person.id];
     const tableId = `person-${person.id}`;
-    const rows = sortedExpenses(stat.orders, tableId, order => order.expense).map(order => `<tr><td>${esc(fmtTime(order.expense.time))}</td><td class="expense-order-cell"><span>${esc(order.expense.note || '未填写说明')}</span><button class="expense-edit-btn" type="button" data-expense-id="${esc(order.expense.id)}">编辑</button></td><td class="money">¥${fmtMoney(order.expense.amount)}</td><td>${esc(names[order.expense.payerId] || '未知')}</td><td class="money">¥${fmtMoney(order.share)}</td></tr>`).join('');
+    const rows = sortedExpenses(stat.orders, tableId, order => order.expense).map(order => `<tr><td>${esc(fmtTime(order.expense.time))}</td><td class="expense-order-cell"><span>${esc(order.expense.note || '未填写说明')}</span><button class="expense-edit-btn" type="button" data-expense-id="${esc(order.expense.id)}" aria-label="编辑${esc(order.expense.note || '这笔花销')}" title="编辑">✎</button></td><td class="money">¥${fmtMoney(order.expense.amount)}</td><td>${esc(names[order.expense.payerId] || '未知')}</td><td class="money">¥${fmtMoney(order.share)}</td></tr>`).join('');
     return `<details class="person-exp-table" data-table-id="${esc(tableId)}" ${expandedExpenseTables.has(tableId) ? 'open' : ''}><summary><div class="expense-table-title"><span class="expense-disclosure" aria-hidden="true">›</span><div><span>个人账单 · ${stat.orders.length} 笔</span><h3>${esc(person.name || '未命名')}</h3></div></div><div class="person-exp-totals"><b>实际付款 ¥${fmtMoney(stat.paid)}</b><b>实际花销 ¥${fmtMoney(stat.owed)}</b></div></summary>
       <div class="exp-table-scroll"><table><thead><tr><th>${sortButton(tableId, 'time', '时间')}</th><th>订单</th><th>${sortButton(tableId, 'amount', '订单金额')}</th><th>付款人</th><th>自己承担</th></tr></thead><tbody>${rows || '<tr><td colspan="5" class="empty-cell">尚未参与任何订单</td></tr>'}</tbody></table></div></details>`;
   }).join('');
@@ -389,6 +397,7 @@ let editingExpenseId = null;
 function openExpModal(expenseId = null) {
   const people = trip.people || [];
   editingExpenseId = expenseId;
+  expenseModalScrollY = window.scrollY;
   const source = expenseId ? (trip.expenses || []).find(item => item.id === expenseId) : null;
   const expense = source ? normalizeExpense(source, people) : null;
   const payerId = expense ? expense.payerId : expModalPerson;
@@ -423,6 +432,8 @@ function renderExpenseSplitEditor(initialAllocations = null) {
   const custom = currentSplitMode() === 'custom';
   const holder = $('#expCustomSplits');
   holder.hidden = !custom;
+  holder.setAttribute('aria-hidden', String(!custom));
+  if (!custom) holder.replaceChildren();
   if (custom) {
     const previous = initialAllocations ? Object.fromEntries(initialAllocations.map(item => [item.personId, item.amount])) : Object.fromEntries($$('#expCustomSplits input').map(input => [input.dataset.personId, input.value]));
     holder.innerHTML = ids.map(id => {
@@ -507,6 +518,7 @@ function initExpenseModal() {
       const index = trip.expenses.findIndex(item => item.id === editingExpenseId);
       if (index >= 0) trip.expenses[index] = { ...trip.expenses[index], ...nextExpense, id: editingExpenseId };
     } else trip.expenses.push(nextExpense);
+    pendingExpenseScrollY = expenseModalScrollY;
     closeExpModal();
     renderExpense();
     queueSave();
