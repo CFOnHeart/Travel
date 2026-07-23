@@ -5,13 +5,34 @@ import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const root = __dirname;
+const tokenPath = path.join(root, '.llm_token_local');
+const localToken = (await fs.readFile(tokenPath, 'utf8').catch(() => '')).trim();
+if (!localToken && process.env.LOCAL_DEV_SERVER_NO_LISTEN !== '1') {
+  throw new Error('缺少本地 LLM API key：请在 .llm_token_local 中填写密钥。');
+}
+process.env.AOAI_ENDPOINT = 'https://openai-jun-test.openai.azure.com/';
+process.env.AOAI_DEPLOYMENT = 'gpt-5.4';
+process.env.AOAI_API_VERSION = '2024-12-01-preview';
+process.env.AOAI_API_KEY = localToken;
+
 const require = createRequire(import.meta.url);
 const { __test } = require('./api/src/functions/trips.js');
 
 const cloudApi = 'https://func-yntravel-ue8266.azurewebsites.net/api';
 const localApi = 'http://localhost:7071/api';
-const root = __dirname;
-const localTrips = new Map();
+const productionTripId = 'yunnan2026';
+const testTripId = 'yunnan2026-localtest';
+
+function cloudTripId(localTripId) {
+  return localTripId === productionTripId ? testTripId : localTripId;
+}
+
+function isWritableTestTrip(tripId) {
+  return tripId === productionTripId || tripId === testTripId || tripId.startsWith('localtest-');
+}
+
+export { cloudTripId, isWritableTestTrip, productionTripId, testTripId };
 
 function demoTrip() {
   return {
@@ -102,6 +123,14 @@ async function proxyJson(targetUrl, init = {}) {
   return { ok: resp.ok, status: resp.status, data };
 }
 
+async function saveCloudTrip(tripId, trip) {
+  return proxyJson(`${cloudApi}/trips/${encodeURIComponent(cloudTripId(tripId))}/save`, {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json; charset=utf-8' },
+    body: JSON.stringify({ trip })
+  });
+}
+
 const apiServer = http.createServer(async (req, res) => {
   try {
     if (req.method === 'OPTIONS') return send(res, 204, '');
@@ -112,9 +141,10 @@ const apiServer = http.createServer(async (req, res) => {
       const text = String(body.text || '').trim();
       if (text.length < 10) return json(res, 400, { error: '行程描述太短' });
       const trip = await __test.generateValidatedTrip(text);
-      const tripId = `local-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
-      localTrips.set(tripId, trip);
-      return json(res, 200, { tripId, trip, localBackend: true });
+      const tripId = `localtest-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+      const saved = await saveCloudTrip(tripId, trip);
+      if (!saved.ok) return json(res, saved.status, saved.data);
+      return json(res, 200, { tripId, trip, localBackend: true, onlineTestData: true });
     }
 
     const match = url.pathname.match(/^\/api\/trips\/([^/]+)(?:\/(chat|save|tools\/execute))?$/);
@@ -126,12 +156,13 @@ const apiServer = http.createServer(async (req, res) => {
       return json(res, 200, { trip: demoTrip() });
     }
 
-    if (localTrips.has(tripId) && !action && req.method === 'GET') {
-      return json(res, 200, { trip: localTrips.get(tripId) });
-    }
-
     if (!action && req.method === 'GET') {
-      const proxied = await proxyJson(`${cloudApi}/trips/${encodeURIComponent(tripId)}`);
+      const proxied = await proxyJson(`${cloudApi}/trips/${encodeURIComponent(cloudTripId(tripId))}`);
+      if (proxied.ok) {
+        proxied.data.localBackend = true;
+        proxied.data.onlineTestData = true;
+        proxied.data.testTripId = cloudTripId(tripId);
+      }
       return json(res, proxied.status, proxied.data);
     }
 
@@ -143,17 +174,20 @@ const apiServer = http.createServer(async (req, res) => {
     }
 
     if (action === 'tools/execute') {
-      return json(res, 409, { error: '本地检查模式已禁用写入执行。请只验证是否会弹出确认框；需要真实写入时再切回正式后端。' });
+      if (!isWritableTestTrip(tripId)) return json(res, 403, { error: '本地服务只允许修改隔离的线上测试行程。' });
+      const body = await readJson(req);
+      const proxied = await proxyJson(`${cloudApi}/trips/${encodeURIComponent(cloudTripId(tripId))}/tools/execute`, {
+        method: 'POST', headers: { 'content-type': 'application/json; charset=utf-8' }, body: JSON.stringify(body)
+      });
+      return json(res, proxied.status, proxied.data);
     }
 
     if (action === 'save') {
-      if (localTrips.has(tripId)) {
-        const body = await readJson(req);
-        if (!body.trip || typeof body.trip !== 'object') return json(res, 400, { error: 'missing trip' });
-        localTrips.set(tripId, body.trip);
-        return json(res, 200, { ok: true, localBackend: true });
-      }
-      return json(res, 409, { error: '本地检查模式已禁用保存，避免写入线上数据。' });
+      if (!isWritableTestTrip(tripId)) return json(res, 403, { error: '本地服务只允许修改隔离的线上测试行程。' });
+      const body = await readJson(req);
+      if (!body.trip || typeof body.trip !== 'object') return json(res, 400, { error: 'missing trip' });
+      const saved = await saveCloudTrip(tripId, body.trip);
+      return json(res, saved.status, saved.ok ? { ...saved.data, localBackend: true, onlineTestData: true } : saved.data);
     }
 
     return json(res, 405, { error: 'local dev proxy: method not allowed' });
@@ -179,6 +213,8 @@ const staticServer = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost:5173');
     let pathname = decodeURIComponent(url.pathname);
     if (pathname === '/') pathname = '/app/trip.html';
+    if (pathname.endsWith('/')) pathname += 'index.html';
+    if (pathname.split('/').some(part => part.startsWith('.'))) return send(res, 404, 'Not found');
     const filePath = path.normalize(path.join(root, pathname));
     if (!filePath.startsWith(root)) return send(res, 403, 'Forbidden');
     let body = await fs.readFile(filePath);
@@ -192,5 +228,11 @@ const staticServer = http.createServer(async (req, res) => {
   }
 });
 
-apiServer.listen(7071, () => console.log(`Local API proxy: ${localApi}`));
-staticServer.listen(5173, () => console.log('Local frontend: http://localhost:5173/app/trip.html'));
+if (process.env.LOCAL_DEV_SERVER_NO_LISTEN !== '1') {
+  apiServer.listen(7071, () => console.log(`Local API proxy: ${localApi}`));
+  staticServer.listen(5173, () => {
+    console.log('Local frontend: http://localhost:5173/app/trip-collections/?trip=yunnan2026');
+    console.log(`Online test data: ${testTripId}`);
+    console.log(`Local LLM: ${process.env.AOAI_DEPLOYMENT} (${process.env.AOAI_API_VERSION})${localToken ? '' : ' — .llm_token_local is empty'}`);
+  });
+}
