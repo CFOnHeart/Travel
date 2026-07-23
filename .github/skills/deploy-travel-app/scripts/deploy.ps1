@@ -36,9 +36,9 @@ Write-Host "All chat regression cases passed." -ForegroundColor Green
 
 # Derive Function App name from API_BASE (js/config.js, fallback to the HTML)
 function Get-FunctionAppName {
-  foreach ($f in @("云南/js/config.js", "云南/旅游计划.html")) {
+  foreach ($f in @("app/js/config.js", "云南/js/config.js", "云南/旅游计划.html")) {
     if (Test-Path $f) {
-      $text = Get-Content $f -Raw
+      $text = Get-Content -LiteralPath $f -Raw
       if ($text -match "https://([a-z0-9-]+)\.azurewebsites\.net/api") { return $Matches[1] }
     }
   }
