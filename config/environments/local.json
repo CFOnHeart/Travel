@@ -1,0 +1,11 @@
+{
+  "environment": "local",
+  "subscriptionId": "765e1ed7-a890-4d1d-86a3-a7116c7c7250",
+  "resourceGroup": "rg-yn-travel-local",
+  "location": "eastasia",
+  "storageAccount": "stynlocal2zf050",
+  "functionApp": null,
+  "apiBase": "http://localhost:7071/api",
+  "frontendOrigin": "http://localhost:5173",
+  "frontendApp": null
+}

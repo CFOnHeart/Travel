@@ -74,7 +74,7 @@
 字段约束：
 
 | 字段 | 说明 |
-|------|------|
+| --- | --- |
 | `id` | 花销唯一 ID，编辑和删除依赖该值 |
 | `personId` | 兼容字段，与 `payerId` 都表示付款人 |
 | `payerId` | 实际付款人的 `people[].id` |
@@ -128,7 +128,7 @@
 平台花销位于 `trip.expenses[]`，随整份 trip JSON 通过以下接口读写：
 
 | 方法 | 路由 | 作用 |
-|------|------|------|
+| --- | --- | --- |
 | `GET` | `/api/trips/{id}` | 读取整份行程和花销 |
 | `PUT` | `/api/trips/{id}/save` | 保存整份行程 Schema |
 | `POST` | `/api/trips/{id}/chat` | 生成只读回答或待确认工具 |
@@ -138,12 +138,30 @@
 
 ## 本地隔离测试
 
-本地开发服务器将浏览器中的 `?trip=yunnan2026` 映射到云端测试副本 `yunnan2026-localtest`，因此本地新增、编辑和删除不会写入生产 `yunnan2026`。本地 LLM 调用读取被 Git 忽略的 `.llm_token_local`，其他真实 trip ID 默认只读。
+本地开发使用物理隔离的数据链路：`localhost:5173` → `.tmp-local-dev-server.mjs`（`localhost:7071`）→ `rg-yn-travel-local` 中的独立 Storage。Local 没有 Function App 或 App Service，也不会代理 Production Function。浏览器中的 `?trip=yunnan2026` 直接读取 Local `trips` Table 的同名记录，不做 ID 映射。
+
+Storage 连接串放在被 Git 忽略的 `.storage_local`；本地 LLM 的 `API_KEY/API_MODEL/API_VERSION/ENDPOINT` 放在被忽略的 `.llm_token_local`。两个文件都不能提交或输出。Production 的 `yunnan2026-localtest` 只作为一次性复制源，复制为 Local `yunnan2026` 后仍保留在 Production，Production `yunnan2026` 不参与迁移。
+
+Azure Table 的单个字符串属性最多约 32K 个 UTF-16 字符。Local API 保存前会移除已单独存放在 `expenseAnalysis` Table 的分类字段；如果行程本体仍超过限制，则自动将 `trips.data` 保存为 gzip + Base64，并通过 `dataEncoding` 标记，读取时透明解压。前端数据结构和操作方式不变。
+
+### AI 消费分类与分析
+
+平台的“消费分析”Tab 在 Production 与 Local 环境均可用：
+
+- 点击“AI 分类”后，当前环境的 API 把花销 `id/amount/note` 发送给服务端配置的 Azure OpenAI；密钥不会进入浏览器。
+- 模型只能从六类中选择：餐饮、交通、住宿、游玩、购物、其他；未知、漏项或非法类别会归入“其他”。
+- 分类结果按 `PartitionKey=tripId`、`RowKey=expenseId` 写入当前环境独立的 `expenseAnalysis` Table，不会增加 `trips` Table 行的大小。
+- 每次读取行程时，API 按花销 ID 合并分类；金额、付款人和分摊字段保持不变。
+- 新增或编辑花销会让该笔记录在当前页面中变为待重新分类；点击“重新分析”可刷新全部类别。
+- “消费分析”Tab 展示全体类别环形图、每位同行人的实际付款/实际承担金额和比例对比，以及每个人按实际承担金额计算的消费类型环形图。
+- 点击个人环形图中的分类扇区或右侧分类行，会从右侧打开该成员该类型的全部订单明细，按时间倒序展示交易时间、付款人、订单总金额和该成员承担金额；可点遮罩、关闭按钮或按 `Esc` 关闭。
+
+路由为 `POST /api/trips/{id}/expenses/classify`。Local 与 Production 使用物理隔离的 Storage，分类结果不会跨环境写入。
 
 ## 实现与测试
 
 | 范围 | 文件 |
-|------|------|
+| --- | --- |
 | 分摊、账本、结算、时间线防重叠 | `app/js/expense-model.js` |
 | 页面、弹窗、表格、编辑和状态保留 | `app/js/trip.js` |
 | 花销视觉样式 | `app/css/styles.css` |
@@ -151,6 +169,7 @@
 | 分摊与结算回归测试 | `api/test/expense-split.test.js` |
 | 测试数据 | `api/test/fixtures/expense-split-trip.json` |
 | 聊天写入与安全回归 | `api/test/chat-cases/`、`api/test/trips-chat-intent.test.js` |
-| 本地测试映射 | `.tmp-local-dev-server.mjs`、`api/test/local-dev-server.test.js` |
+| 本地环境隔离 | `.tmp-local-dev-server.mjs`、`config/environments/*.json`、`api/test/local-dev-server.test.js` |
+| AI 分类与消费图表 | `api/src/functions/trips.js`、`.tmp-local-dev-server.mjs`、`app/js/trip.js`、`api/test/expense-analysis.test.js` |
 
 部署前必须在 `api/` 运行 `npm test`。测试覆盖分余数、旧记录兼容、账本、结算、自定义合计校验、AI 新增/修改/删除和本地测试数据隔离。

@@ -28,6 +28,12 @@ Publishes the latest code for the Travel project:
 ## Scope
 Default is **all**. If the user says only "frontend" or "backend", do just that part.
 
+## Environment safety
+- Resource names come from `config/environments/local.json` or `prod.json`; never infer them from frontend source.
+- The helper script defaults to `-Environment local`. Local mode runs tests and validates localhost/secret configuration, then exits without publishing anything.
+- Production publishing requires an explicit `-Environment prod`.
+- Local development uses `localhost:5173` → `localhost:7071` → the separate Local Storage account. It has no Function App or App Service.
+
 ## Procedure
 
 ### Mandatory pre-deployment test gate
@@ -190,9 +196,9 @@ $resp = Invoke-WebRequest -UseBasicParsing "https://yntravel-site-ue8266.azurewe
 ### One-shot helper
 The bundled script does both parts with checks and a smoke test:
 ```powershell
-./.github/skills/deploy-travel-app/scripts/deploy.ps1 -Scope all
+./.github/skills/deploy-travel-app/scripts/deploy.ps1 -Environment prod -Scope all
 ```
-See [deploy.ps1](./scripts/deploy.ps1). Pass `-Scope frontend` or `-Scope backend` to limit.
+See [deploy.ps1](./scripts/deploy.ps1). Pass `-Environment local` for validation only, or explicit `-Environment prod` to publish. Pass `-Scope frontend` or `-Scope backend` to limit production deployment.
 
 ## Validation Checklist
 - [ ] Mandatory `npm test` gate passed, including all `api/test/chat-cases/` cases.

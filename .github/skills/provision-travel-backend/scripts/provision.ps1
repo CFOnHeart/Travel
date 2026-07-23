@@ -19,8 +19,7 @@
 #>
 param(
   [Parameter(Mandatory = $true)][ValidateSet('new', 'update')][string]$Mode,
-  [string]$Location = 'eastasia',
-  [string]$ResourceGroup = 'rg-yn-travel',
+  [ValidateSet('local', 'prod')][string]$Environment = 'local',
   [string]$PagesOrigin = 'https://cfonheart.github.io',
   [string]$NodeVersion = '22'
 )
@@ -31,6 +30,11 @@ $ErrorActionPreference = 'Stop'
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..\..")).Path
 Set-Location $RepoRoot
 $Html = "云南/旅游计划.html"
+$ConfigPath = Join-Path $RepoRoot "config/environments/$Environment.json"
+if (-not (Test-Path $ConfigPath)) { throw "Missing environment config: $ConfigPath" }
+$Config = Get-Content $ConfigPath -Raw | ConvertFrom-Json
+$Location = $Config.location
+$ResourceGroup = $Config.resourceGroup
 
 function Assert-Login {
   try { az account show 1>$null 2>$null }
@@ -78,6 +82,23 @@ function Test-Api($func) {
 }
 
 Assert-Login
+
+if ($Environment -eq 'local') {
+  Write-Host "`n=== LOCAL storage-only environment ===" -ForegroundColor Green
+  az account set --subscription $Config.subscriptionId
+  az group create -n $ResourceGroup -l $Location | Out-Null
+  $exists = az storage account check-name -n $Config.storageAccount --query nameAvailable -o tsv
+  if ($exists -eq 'true') {
+    az storage account create -n $Config.storageAccount -g $ResourceGroup -l $Location --sku Standard_LRS --allow-blob-public-access true | Out-Null
+  }
+  $connection = az storage account show-connection-string -g $ResourceGroup -n $Config.storageAccount --query connectionString -o tsv
+  foreach ($table in @('trips', 'ratelimit', 'checklist', 'expenses', 'expenseAnalysis')) {
+    az storage table create --name $table --connection-string $connection | Out-Null
+  }
+  az storage container create --name proofs --public-access blob --connection-string $connection | Out-Null
+  Write-Host "Local RG, Storage, Tables and Blob container are ready. No Function App was created." -ForegroundColor Green
+  exit 0
+}
 
 if ($Mode -eq 'new') {
   $sfx  = -join ((1..6) | ForEach-Object { [char[]]'abcdefghijklmnopqrstuvwxyz0123456789' | Get-Random })

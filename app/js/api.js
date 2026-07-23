@@ -61,6 +61,19 @@ export async function executeTripTools(tripId, trip, toolCalls) {
   return data;
 }
 
+/** 由当前环境的服务端 LLM 对行程花销进行分类。 */
+export async function classifyTripExpenses(tripId, trip) {
+  const resp = await fetch(`${API_BASE}/trips/${encodeURIComponent(tripId)}/expenses/classify`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ trip: normalizeTripStructure(trip) })
+  });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(data.error || `智能分类失败（${resp.status}）`);
+  if (data.trip) data.trip = normalizeTripStructure(data.trip);
+  return data;
+}
+
 /** 上传预定清单条目的图片凭证，返回可访问的 blob URL。 */
 export async function uploadImage(id, dataUrl) {
   const resp = await fetch(`${API_BASE}/upload`, {

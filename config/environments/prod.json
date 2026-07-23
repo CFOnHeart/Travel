@@ -1,0 +1,11 @@
+{
+  "environment": "production",
+  "subscriptionId": "765e1ed7-a890-4d1d-86a3-a7116c7c7250",
+  "resourceGroup": "rg-yn-travel",
+  "location": "eastasia",
+  "storageAccount": "stynue8266",
+  "functionApp": "func-yntravel-ue8266",
+  "apiBase": "https://func-yntravel-ue8266.azurewebsites.net/api",
+  "frontendOrigin": "https://yntravel-site-ue8266.azurewebsites.net",
+  "frontendApp": "yntravel-site-ue8266"
+}

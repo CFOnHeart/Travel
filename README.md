@@ -133,10 +133,14 @@ Travel/
 
 ### 本地运行
 ```powershell
-cd api
-npm install
-func start           # 需要 Azurite 或在 local.settings.json 配置 AzureWebJobsStorage 连接串
+node .tmp-local-dev-server.mjs
+# 平台：http://localhost:5173/app/trip-collections/?trip=yunnan2026
+# API：http://localhost:7071/api
 ```
+
+本地平台不调用 Production Function。它使用 `config/environments/local.json` 指定的 `rg-yn-travel-local` / `stynlocal2zf050`，通过被 Git 忽略的 `.storage_local` 直接访问 Local Storage；LLM 配置来自被忽略的 `.llm_token_local`。Local 没有 Function App 或 App Service，浏览器标题会增加 `[Local]`。
+
+非秘密资源配置位于 `config/environments/prod.json` 和 `local.json`。部署脚本默认 `-Environment local`，只测试和校验；发布线上资源必须显式传入 `-Environment prod`。
 
 ### 部署
 ```powershell

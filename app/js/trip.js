@@ -1,13 +1,13 @@
 /** 行程页主逻辑：加载、渲染、Tab 切换、勾选保存、分享、编辑。 */
-import { getTrip, saveTrip, uploadImage } from './api.js';
-import { RECENT_KEY } from './config.js';
+import { classifyTripExpenses, getTrip, saveTrip, uploadImage } from './api.js';
+import { APP_ENV, RECENT_KEY } from './config.js';
 import {
   renderHero, renderSections, renderChecklistPanel, renderPackingPanel, esc
 } from './render.js?v=figma-travel-20260715';
 import { initEditor, setEditorData } from './editor.js';
 import { initChat } from './chat.js';
 import { initPhotos, renderPhotosPanel } from './photos.js';
-import { expenseLedger, normalizeExpense, settlementTransfers, spreadTimelinePositions } from './expense-model.js';
+import { expenseCategorySummary, expenseLedger, normalizeExpense, personCategorySummaries, personSpendingSummary, settlementTransfers, spreadTimelinePositions } from './expense-model.js';
 
 const PANELS = ['trip', 'booking', 'packing', 'expense', 'photos'];
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
@@ -25,6 +25,17 @@ const expandedExpenseTables = new Set();
 let currentExpenseView = 'timeline';
 let pendingExpenseScrollY = null;
 let expenseModalScrollY = null;
+let expenseAnalysisLoading = false;
+let expenseAnalysisError = '';
+
+const EXPENSE_CATEGORY_META = {
+  '餐饮': { color: '#ff385c', icon: '🍜' },
+  '交通': { color: '#6c5ce7', icon: '🚗' },
+  '住宿': { color: '#00a699', icon: '🏨' },
+  '游玩': { color: '#f5a623', icon: '🎟️' },
+  '购物': { color: '#e96b9b', icon: '🛍️' },
+  '其他': { color: '#929292', icon: '•••' }
+};
 
 function showOverlay(text) {
   $('#loadText').textContent = text;
@@ -39,7 +50,8 @@ function renderAll() {
   $('#mpanel-packing').innerHTML = renderPackingPanel(trip);
   renderExpense();
   $('#mpanel-photos').innerHTML = renderPhotosPanel(trip);
-  document.title = (trip.meta && trip.meta.title) || '我的行程';
+  const title = (trip.meta && trip.meta.title) || '我的行程';
+  document.title = APP_ENV === 'local' ? `[Local] ${title}` : title;
   wireChecklist();
 }
 
@@ -62,6 +74,7 @@ function renderExpense() {
       <select id="expenseViewer">${people.map(person => `<option value="${esc(person.id)}" ${person.id === selectedId ? 'selected' : ''}>${esc(person.name || '未命名')}</option>`).join('')}</select>
       <button class="tool-btn primary" id="addPersonBtn" type="button">＋ 添加人员</button>
       <button class="tool-btn" id="addExpenseBtn" type="button" ${people.length ? '' : 'disabled'}>＋ 记一笔</button>
+      <button class="tool-btn expense-ai-btn" id="analyzeExpensesBtn" type="button" ${expenses.length && !expenseAnalysisLoading ? '' : 'disabled'}>${expenseAnalysisLoading ? '分析中…' : '✨ AI 分类'}</button>
     </div>
     <div class="exp-summary-grid">
       ${summaryCard('总支出', ledger.total, '全部已记录消费')}
@@ -73,12 +86,15 @@ function renderExpense() {
     <div class="exp-view-tabs" role="tablist">
       <button class="${currentExpenseView === 'timeline' ? 'active' : ''}" type="button" data-exp-view="timeline">时间序列</button>
       <button class="${currentExpenseView === 'tables' ? 'active' : ''}" type="button" data-exp-view="tables">表格明细</button>
+      <button class="${currentExpenseView === 'insights' ? 'active' : ''}" type="button" data-exp-view="insights">消费分析</button>
     </div>
     <div id="expTimelineView" class="exp-view-panel ${currentExpenseView === 'timeline' ? 'active' : ''}"><div id="expBoard"></div></div>
-    <div id="expTablesView" class="exp-view-panel ${currentExpenseView === 'tables' ? 'active' : ''}"></div>`;
+    <div id="expTablesView" class="exp-view-panel ${currentExpenseView === 'tables' ? 'active' : ''}"></div>
+    <div id="expInsightsView" class="exp-view-panel ${currentExpenseView === 'insights' ? 'active' : ''}"></div>`;
 
   $('#addPersonBtn').addEventListener('click', addPerson);
   $('#addExpenseBtn').addEventListener('click', () => { expModalPerson = selectedId; openExpModal(); });
+  $('#analyzeExpensesBtn').addEventListener('click', analyzeExpenses);
   if ($('#expenseViewer')) $('#expenseViewer').addEventListener('change', event => { trip.expenseViewerId = event.target.value; renderExpense(); });
   $$('.exp-view-tabs button').forEach(button => button.addEventListener('click', () => switchExpenseView(button.dataset.expView)));
 
@@ -91,6 +107,7 @@ function renderExpense() {
   }
   buildBoard(people, ledger.rows);
   buildExpenseTables(people, ledger);
+  buildExpenseInsights(people, ledger);
   if (restoreScrollY !== null) requestAnimationFrame(() => window.scrollTo({ top: restoreScrollY, behavior: 'auto' }));
 }
 
@@ -99,10 +116,166 @@ function summaryCard(label, value, hint, tone = '') {
 }
 
 function switchExpenseView(view) {
-  currentExpenseView = view === 'tables' ? 'tables' : 'timeline';
+  currentExpenseView = ['tables', 'insights'].includes(view) ? view : 'timeline';
   $$('.exp-view-tabs button').forEach(button => button.classList.toggle('active', button.dataset.expView === view));
   $('#expTimelineView').classList.toggle('active', view === 'timeline');
   $('#expTablesView').classList.toggle('active', view === 'tables');
+  $('#expInsightsView').classList.toggle('active', view === 'insights');
+}
+
+function categoryDonutSegments(rows, personName) {
+  let offset = 0;
+  return rows.map(item => {
+    const meta = EXPENSE_CATEGORY_META[item.category];
+    const segment = `<circle class="person-category-segment" cx="50" cy="50" r="42" pathLength="100" fill="none" stroke="${meta.color}" stroke-width="16" stroke-dasharray="${item.percentage} ${100 - item.percentage}" stroke-dashoffset="${-offset}" data-person-category="${esc(item.category)}" tabindex="0" role="button" aria-label="查看${esc(personName)}的${esc(item.category)}订单，${item.percentage}%"></circle>`;
+    offset += item.percentage;
+    return segment;
+  }).join('');
+}
+
+function closeExpenseDetailDrawer() {
+  const drawer = $('#expenseDetailDrawer');
+  const mask = $('#expenseDetailMask');
+  if (!drawer || !mask) return;
+  drawer.classList.remove('open');
+  drawer.setAttribute('aria-hidden', 'true');
+  mask.classList.remove('open');
+}
+
+function openExpenseDetailDrawer(personId, category) {
+  const people = trip.people || [];
+  const person = people.find(item => item.id === personId);
+  if (!person) return;
+  const rows = expenseLedger(people, trip.expenses || []).rows.map(expense => ({
+    expense,
+    share: expense.allocations.find(item => item.personId === personId)
+  })).filter(row => row.share && (EXPENSE_CATEGORY_META[row.expense.category] ? row.expense.category : '其他') === category)
+    .sort((a, b) => new Date(b.expense.time || 0) - new Date(a.expense.time || 0));
+  let mask = $('#expenseDetailMask');
+  let drawer = $('#expenseDetailDrawer');
+  if (!drawer) {
+    document.body.insertAdjacentHTML('beforeend', `<div class="expense-detail-mask" id="expenseDetailMask"></div><aside class="expense-detail-drawer" id="expenseDetailDrawer" aria-hidden="true" aria-labelledby="expenseDetailTitle"><header><div><span id="expenseDetailEyebrow"></span><h3 id="expenseDetailTitle"></h3><p id="expenseDetailSummary"></p></div><button type="button" class="expense-detail-close" aria-label="关闭订单明细">×</button></header><div class="expense-detail-list" id="expenseDetailList"></div></aside>`);
+    mask = $('#expenseDetailMask');
+    drawer = $('#expenseDetailDrawer');
+    mask.addEventListener('click', closeExpenseDetailDrawer);
+    drawer.querySelector('.expense-detail-close').addEventListener('click', closeExpenseDetailDrawer);
+  }
+  const meta = EXPENSE_CATEGORY_META[category] || EXPENSE_CATEGORY_META['其他'];
+  const totalShare = rows.reduce((sum, row) => sum + Number(row.share.amount || 0), 0);
+  $('#expenseDetailEyebrow').innerHTML = `<i style="--category-color:${meta.color}"></i>${esc(category)}订单`;
+  $('#expenseDetailTitle').textContent = `${person.name || '未命名'}的消费明细`;
+  $('#expenseDetailSummary').textContent = `${rows.length} 笔订单 · 承担 ¥${fmtMoney(totalShare)}`;
+  $('#expenseDetailList').innerHTML = rows.map(({ expense, share }) => {
+    const payer = people.find(item => item.id === expense.payerId);
+    return `<article class="expense-detail-order">
+      <div class="expense-detail-order-head"><div><span>${esc(fmtTime(expense.time) || '时间未记录')}</span><h4>${esc(expense.note || '未命名订单')}</h4></div><strong>¥${fmtMoney(expense.amount)}</strong></div>
+      <dl><div><dt>付款人</dt><dd>${esc((payer && payer.name) || '未知')}</dd></div><div><dt>订单总金额</dt><dd>¥${fmtMoney(expense.amount)}</dd></div><div class="share"><dt>${esc(person.name || '该用户')}承担</dt><dd>¥${fmtMoney(share.amount)}</dd></div></dl>
+    </article>`;
+  }).join('') || '<div class="expense-detail-empty">该类别暂无订单</div>';
+  mask.classList.add('open');
+  drawer.classList.add('open');
+  drawer.setAttribute('aria-hidden', 'false');
+  requestAnimationFrame(() => drawer.querySelector('.expense-detail-close').focus());
+}
+
+async function analyzeExpenses() {
+  if (expenseAnalysisLoading || !(trip.expenses || []).length) return;
+  expenseAnalysisLoading = true;
+  expenseAnalysisError = '';
+  currentExpenseView = 'insights';
+  renderExpense();
+  try {
+    const result = await classifyTripExpenses(tripId, trip);
+    trip = result.trip;
+    setEditorData(trip);
+    rememberRecent();
+  } catch (error) {
+    expenseAnalysisError = error.message || '智能分类失败，请稍后重试。';
+  } finally {
+    expenseAnalysisLoading = false;
+    renderExpense();
+  }
+}
+
+function buildExpenseInsights(people, ledger) {
+  const panel = $('#expInsightsView');
+  const categories = Object.keys(EXPENSE_CATEGORY_META);
+  const categoryRows = expenseCategorySummary(ledger.rows, categories);
+  const classifiedCount = ledger.rows.filter(expense => categories.includes(expense.category)).length;
+  const unclassifiedCount = ledger.rows.length - classifiedCount;
+  const personRows = personSpendingSummary(people, ledger.rows);
+  const personCategoryRows = personCategorySummaries(people, ledger.rows, categories);
+  if (!ledger.rows.length) {
+    panel.innerHTML = '<div class="expense-insights-empty"><span>📊</span><h3>还没有可以分析的花销</h3><p>先记录一笔花销，再让 AI 归类并生成消费图表。</p></div>';
+    return;
+  }
+  const gradient = categoryRows.length
+    ? `conic-gradient(${categoryRows.reduce((parts, item, index) => {
+      const before = categoryRows.slice(0, index).reduce((sum, row) => sum + row.percentage, 0);
+      parts.push(`${EXPENSE_CATEGORY_META[item.category].color} ${before}% ${before + item.percentage}%`);
+      return parts;
+    }, []).join(', ')})`
+    : 'conic-gradient(#ebebeb 0 100%)';
+  const analyzedAt = trip.expenseAnalysis && trip.expenseAnalysis.analyzedAt;
+  panel.innerHTML = `
+    <section class="expense-insights-hero">
+      <div><span class="insights-eyebrow">AI 消费洞察</span><h3>这趟旅行的钱都花在哪里？</h3><p>${expenseAnalysisLoading ? '正在理解每笔消费的用途…' : unclassifiedCount ? `还有 ${unclassifiedCount} 笔未分类，点击 AI 分类生成完整分析。` : `已分析 ${classifiedCount} 笔花销${analyzedAt ? ` · ${esc(fmtTime(analyzedAt))} 更新` : ''}`}</p></div>
+      <button class="tool-btn primary expense-insights-run" type="button" ${expenseAnalysisLoading ? 'disabled' : ''}>${expenseAnalysisLoading ? '分析中…' : unclassifiedCount ? '✨ 开始分析' : '↻ 重新分析'}</button>
+    </section>
+    ${expenseAnalysisError ? `<div class="expense-analysis-error" role="alert">${esc(expenseAnalysisError)}</div>` : ''}
+    <div class="expense-insights-grid">
+      <article class="expense-chart-card category-chart-card">
+        <header><span>消费结构</span><h3>类别分布</h3></header>
+        <div class="expense-donut-wrap">
+          <div class="expense-donut" role="img" aria-label="按类别展示花销比例" style="--expense-donut:${gradient}"><div><strong>¥${fmtMoney(ledger.total)}</strong><span>总花销</span></div></div>
+          <ul class="expense-category-legend">${categoryRows.map(item => {
+            const meta = EXPENSE_CATEGORY_META[item.category];
+            return `<li><i style="--category-color:${meta.color}">${meta.icon}</i><span><b>${item.category}</b><small>${item.percentage}%</small></span><strong>¥${fmtMoney(item.amount)}</strong></li>`;
+          }).join('') || '<li class="expense-unclassified">运行 AI 分类后显示类别明细</li>'}</ul>
+        </div>
+      </article>
+      <article class="expense-chart-card person-chart-card">
+        <header><span>同行人对比</span><h3>谁付款，谁承担</h3><div class="person-chart-key"><i></i>实际付款 <i></i>实际承担</div></header>
+        <div class="person-spending-list">${personRows.map(person => `<div class="person-spending-row">
+          <div class="person-spending-name"><b>${esc(person.name)}</b><span>承担 ${person.owedPercentage}%</span></div>
+          <div class="person-bars">
+            <div><span>付款</span><div><i class="paid" style="width:${Math.max(person.paidPercentage, person.paid ? 2 : 0)}%"></i></div><strong>¥${fmtMoney(person.paid)}</strong></div>
+            <div><span>承担</span><div><i class="owed" style="width:${Math.max(person.owedPercentage, person.owed ? 2 : 0)}%"></i></div><strong>¥${fmtMoney(person.owed)}</strong></div>
+          </div>
+        </div>`).join('')}</div>
+      </article>
+    </div>
+    <section class="person-category-section">
+      <header><span>个人消费画像</span><h3>每个人的钱花在哪里？</h3><p>按每笔订单中实际承担的金额统计，而不是按付款人统计。</p></header>
+      <div class="person-category-grid">${personCategoryRows.map(person => {
+        const personGradient = person.categories.length
+          ? `conic-gradient(${person.categories.reduce((parts, item, index) => {
+            const before = person.categories.slice(0, index).reduce((sum, row) => sum + row.percentage, 0);
+            parts.push(`${EXPENSE_CATEGORY_META[item.category].color} ${before}% ${before + item.percentage}%`);
+            return parts;
+          }, []).join(', ')})`
+          : 'conic-gradient(#ebebeb 0 100%)';
+        return `<article class="person-category-card">
+          <header><span class="person-category-avatar">${esc((person.name || '?').trim().slice(0, 1).toUpperCase())}</span><div><h4>${esc(person.name)}</h4><p>承担合计 ¥${fmtMoney(person.total)}</p></div></header>
+          <div class="person-category-body">
+            <div class="person-category-donut" aria-label="${esc(person.name)}的消费类别比例" style="--expense-donut:${personGradient}" data-person-id="${esc(person.personId)}"><svg viewBox="0 0 100 100" role="group" aria-label="${esc(person.name)}的可点击消费类别">${categoryDonutSegments(person.categories, person.name)}</svg><div><strong>${person.categories.length}</strong><span>消费类别</span></div></div>
+            <ul class="person-category-legend" data-person-id="${esc(person.personId)}">${person.categories.map(item => {
+              const meta = EXPENSE_CATEGORY_META[item.category];
+              return `<li><button type="button" data-person-category="${esc(item.category)}" aria-label="查看${esc(person.name)}的${esc(item.category)}订单"><i style="--category-color:${meta.color}"></i><span>${item.category}</span><strong>${item.percentage}%</strong><small>¥${fmtMoney(item.amount)}</small><b aria-hidden="true">›</b></button></li>`;
+            }).join('') || '<li class="expense-unclassified">暂无承担金额</li>'}</ul>
+          </div>
+        </article>`;
+      }).join('')}</div>
+    </section>
+    <p class="expense-analysis-note">AI 分类用于消费概览，可能存在误判；重新分析会覆盖已有类别，但不会改变金额、付款人或分摊。</p>`;
+  panel.querySelector('.expense-insights-run').addEventListener('click', analyzeExpenses);
+  $$('[data-person-category]', panel).forEach(control => {
+    const activate = () => openExpenseDetailDrawer(control.closest('[data-person-id]').dataset.personId, control.dataset.personCategory);
+    control.addEventListener('click', activate);
+    control.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); activate(); }
+    });
+  });
 }
 
 function addPerson() {
@@ -511,6 +684,8 @@ function initExpenseModal() {
       participantIds,
       splitMode,
       allocations,
+      category: '',
+      categoryConfidence: 0,
       note: $('#expNote').value.trim().slice(0, 200),
       time: $('#expTime').value || new Date().toISOString()
     };
@@ -673,6 +848,7 @@ async function onEditorSave(next) {
 
 async function init() {
   if (!tripId) { location.replace('index.html'); return; }
+  document.addEventListener('keydown', event => { if (event.key === 'Escape') closeExpenseDetailDrawer(); });
   initTabs();
   initShare();
   initTemplateSwitch();

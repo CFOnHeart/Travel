@@ -6,9 +6,9 @@ argument-hint: 'Optional: "new" | "update" and region (default eastasia)'
 
 # Provision / Update Travel Backend
 
-Creates the full Azure backend from scratch (**new** environment) or reconciles an
-existing one (**update**): resource group, Storage account (Table + Blob), Function App
-(Node 22, consumption), CORS, app settings, and code deploy.
+Uses committed non-secret settings in `config/environments/<environment>.json`.
+Production can create or reconcile the full backend. Local provisioning creates only a
+separate resource group and Storage account; local API/frontend processes remain on localhost.
 
 ## When to Use
 - Standing up the backend in a **new subscription / region / clean environment**.
@@ -20,6 +20,8 @@ existing one (**update**): resource group, Storage account (Table + Blob), Funct
 |------|--------------|
 | `new` | Generates a unique 6-char suffix, creates RG + Storage + Function App, sets CORS + app settings, deploys code, and **updates `API_BASE` in `云南/js/config.js`**. |
 | `update` | Uses the existing Function App (from `API_BASE`), re-applies CORS + app settings, and redeploys code. Does not recreate resources. |
+
+With `-Environment local`, either mode is idempotent and creates/verifies only RG + Storage + Tables + Blob. It never creates a Function App, App Service, or plan.
 
 Ask the user which mode if unclear. Default region: `eastasia`.
 
@@ -44,10 +46,13 @@ Use the bundled script (recommended), which is idempotent and handles both modes
 
 ```powershell
 # New environment (creates everything, unique names)
-./.github/skills/provision-travel-backend/scripts/provision.ps1 -Mode new -Location eastasia -PagesOrigin "https://cfonheart.github.io"
+./.github/skills/provision-travel-backend/scripts/provision.ps1 -Environment prod -Mode new -PagesOrigin "https://cfonheart.github.io"
 
 # Update existing environment (reconcile + redeploy)
-./.github/skills/provision-travel-backend/scripts/provision.ps1 -Mode update -PagesOrigin "https://cfonheart.github.io"
+./.github/skills/provision-travel-backend/scripts/provision.ps1 -Environment prod -Mode update -PagesOrigin "https://cfonheart.github.io"
+
+# Local storage only; no Function App/App Service
+./.github/skills/provision-travel-backend/scripts/provision.ps1 -Environment local -Mode update
 ```
 
 See [provision.ps1](./scripts/provision.ps1).
@@ -66,6 +71,12 @@ See [provision.ps1](./scripts/provision.ps1).
 1. Read Function App name from `API_BASE`.
 2. Re-apply app setting + CORS (idempotent).
 3. Redeploy code and smoke-test.
+
+### What the script does (local environment)
+1. Reads `config/environments/local.json` and selects its subscription.
+2. Creates/verifies the `-local` resource group and dedicated Storage account.
+3. Creates `trips`, `ratelimit`, `checklist`, `expenses`, and `expenseAnalysis` Tables plus `proofs` Blob container.
+4. Does not provision or publish any web compute resource.
 
 ## After running (new mode)
 The frontend `API_BASE` changed, so **deploy the frontend** to publish it:

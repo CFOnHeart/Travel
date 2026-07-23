@@ -5,6 +5,17 @@
 
 > 一键创建/更新请用 skill：[`/provision-travel-backend`](../.github/skills/provision-travel-backend/SKILL.md)
 
+## 环境隔离
+
+| 环境 | 资源组 | Storage | API | 前端 |
+|---|---|---|---|---|
+| Production | `rg-yn-travel` | `stynue8266` | `func-yntravel-ue8266` | GitHub Pages / `yntravel-site-ue8266` |
+| Local | `rg-yn-travel-local` | `stynlocal2zf050` | `http://localhost:7071/api` | `http://localhost:5173` |
+
+Local 环境没有 Function App、App Service 或 Web 计算计划。`.tmp-local-dev-server.mjs` 通过被 Git 忽略的 `.storage_local` 直接访问 Local Storage；浏览器标题显示 `[Local]`。非秘密资源名保存在 `config/environments/prod.json` 和 `local.json`，任何本地写入都不得回退到 Production Storage。
+
+Local 与 Production Storage 均使用独立的 `expenseAnalysis` Table 保存 AI 消费分类；分类不嵌入 `trips.data`。Local Storage 另外初始化 `trips`、`ratelimit`、`checklist`、`expenses` Tables 和 `proofs` Blob 容器。Local `yunnan2026` 是从 Production 的隔离测试副本 `yunnan2026-localtest` 单向复制而来；源记录保留作回滚，不移动、不删除。
+
 ---
 
 ## 资源清单

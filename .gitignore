@@ -9,6 +9,9 @@ _topdf.js
 node_modules/
 api/local.settings.json
 .llm_token_local
+.storage_local
+.tmp-local-expense-analysis.json
+.backups/
 .azure/
 bin/
 obj/

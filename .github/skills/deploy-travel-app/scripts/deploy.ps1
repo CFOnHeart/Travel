@@ -12,6 +12,8 @@
   ./deploy.ps1 -Scope all -Message "Update itinerary"
 #>
 param(
+  [ValidateSet('local', 'prod')]
+  [string]$Environment = 'local',
   [ValidateSet('frontend', 'backend', 'all')]
   [string]$Scope = 'all',
   [string]$Message = "Update travel app"
@@ -23,6 +25,9 @@ $ErrorActionPreference = 'Stop'
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..\..")).Path
 Set-Location $RepoRoot
 Write-Host "Repo root: $RepoRoot" -ForegroundColor Cyan
+$ConfigPath = Join-Path $RepoRoot "config/environments/$Environment.json"
+if (-not (Test-Path $ConfigPath)) { throw "Missing environment config: $ConfigPath" }
+$Config = Get-Content $ConfigPath -Raw | ConvertFrom-Json
 
 Write-Host "`n=== Mandatory pre-deployment chat tests ===" -ForegroundColor Green
 Push-Location "api"
@@ -33,6 +38,17 @@ try {
   Pop-Location
 }
 Write-Host "All chat regression cases passed." -ForegroundColor Green
+
+if ($Environment -eq 'local') {
+  if ($Config.functionApp) { throw 'Local config must not define a Function App.' }
+  if ($Config.apiBase -notlike 'http://localhost:*') { throw 'Local API must use localhost.' }
+  if (-not (Test-Path '.storage_local')) { throw 'Missing ignored .storage_local connection configuration.' }
+  Write-Host "Local environment validated. Nothing was deployed to Azure." -ForegroundColor Green
+  Write-Host "Start the isolated local stack with: node .tmp-local-dev-server.mjs" -ForegroundColor Cyan
+  exit 0
+}
+
+if (-not $Config.functionApp) { throw 'Production config is missing functionApp.' }
 
 # Derive Function App name from API_BASE (js/config.js, fallback to the HTML)
 function Get-FunctionAppName {
@@ -45,7 +61,7 @@ function Get-FunctionAppName {
   throw "Could not find API_BASE Function App name in js/config.js or the HTML"
 }
 
-function Publish-FunctionAppZip([string]$FunctionApp) {
+function Publish-FunctionAppZip([string]$FunctionApp, [string]$ResourceGroup) {
   Push-Location "api"
   try {
     npm install --omit=dev --registry=https://registry.npmjs.org
@@ -76,10 +92,10 @@ function Publish-FunctionAppZip([string]$FunctionApp) {
       }
     } finally { $archive.Dispose() }
 
-    az functionapp config appsettings delete -g rg-yn-travel -n $FunctionApp --setting-names SCM_DO_BUILD_DURING_DEPLOYMENT ENABLE_ORYX_BUILD --output none
-    az functionapp deployment source config-zip -g rg-yn-travel -n $FunctionApp --src $zipPath --build-remote false --timeout 900
+    az functionapp config appsettings delete -g $ResourceGroup -n $FunctionApp --setting-names SCM_DO_BUILD_DURING_DEPLOYMENT ENABLE_ORYX_BUILD --output none
+    az functionapp deployment source config-zip -g $ResourceGroup -n $FunctionApp --src $zipPath --build-remote false --timeout 900
     if ($LASTEXITCODE -ne 0) { throw "Function deployment failed." }
-    az functionapp restart -g rg-yn-travel -n $FunctionApp
+    az functionapp restart -g $ResourceGroup -n $FunctionApp
     if ($LASTEXITCODE -ne 0) { throw "Function restart failed." }
   } finally {
     Remove-Item -Recurse -Force $packageDir -ErrorAction SilentlyContinue
@@ -105,13 +121,13 @@ if ($Scope -in @('frontend', 'all')) {
 
 if ($Scope -in @('backend', 'all')) {
   Write-Host "`n=== Backend → Azure Functions ===" -ForegroundColor Green
-  $func = Get-FunctionAppName
+  $func = $Config.functionApp
   Write-Host "Target Function App: $func"
 
   # Verify login
   try { az account show 1>$null 2>$null } catch { throw "Not logged in. Run 'az login' first." }
 
-  Publish-FunctionAppZip $func
+  Publish-FunctionAppZip $func $Config.resourceGroup
 
   Write-Host "`nSmoke-testing API (cold start may take a moment)..." -ForegroundColor Cyan
   try {

@@ -11,10 +11,12 @@
 const { app } = require('@azure/functions');
 const { TableClient } = require('@azure/data-tables');
 const crypto = require('crypto');
+const { gzipSync, gunzipSync } = require('zlib');
 
 const conn = process.env.AzureWebJobsStorage;
 const TABLE = 'trips';
 const PK = 'trip';
+const ANALYSIS_TABLE = 'expenseAnalysis';
 
 // Azure OpenAI 配置（存在 Function App 应用设置里，绝不落前端）
 const AOAI_ENDPOINT = process.env.AOAI_ENDPOINT;      // https://xxx.openai.azure.com/
@@ -23,7 +25,69 @@ const AOAI_API_KEY = process.env.AOAI_API_KEY;
 const AOAI_API_VERSION = process.env.AOAI_API_VERSION || '2024-12-01-preview';
 
 function client() { return TableClient.fromConnectionString(conn, TABLE); }
+function analysisClient() { return TableClient.fromConnectionString(conn, ANALYSIS_TABLE); }
 async function ensureTable(c) { try { await c.createTable(); } catch (e) { /* exists */ } }
+
+function tripForStorage(trip) {
+  const stored = {
+    ...trip,
+    expenses: (Array.isArray(trip && trip.expenses) ? trip.expenses : []).map(({ category, categoryConfidence, ...expense }) => expense)
+  };
+  delete stored.expenseAnalysis;
+  return stored;
+}
+
+function encodeTripData(trip) {
+  const json = JSON.stringify(trip);
+  return json.length > 32000
+    ? { data: gzipSync(Buffer.from(json, 'utf8')).toString('base64'), dataEncoding: 'gzip-base64' }
+    : { data: json, dataEncoding: 'json' };
+}
+
+function decodeTripData(entity) {
+  const data = entity.dataEncoding === 'gzip-base64'
+    ? gunzipSync(Buffer.from(entity.data, 'base64')).toString('utf8')
+    : entity.data;
+  return JSON.parse(data);
+}
+
+async function writeExpenseAnalysis(tripId, classifications) {
+  const c = analysisClient(); await ensureTable(c);
+  const analyzedAt = new Date().toISOString();
+  for (const item of classifications) {
+    await c.upsertEntity({
+      partitionKey: tripId,
+      rowKey: String(item.id),
+      category: item.category,
+      confidence: Number(item.confidence) || 0,
+      analyzedAt
+    }, 'Replace');
+  }
+  return analyzedAt;
+}
+
+async function applyExpenseAnalysis(tripId, trip) {
+  const c = analysisClient(); await ensureTable(c);
+  const rows = [];
+  const escapedId = String(tripId).replace(/'/g, "''");
+  for await (const entity of c.listEntities({ queryOptions: { filter: `PartitionKey eq '${escapedId}'` } })) rows.push(entity);
+  if (!rows.length) return trip;
+  const byId = new Map(rows.map(item => [String(item.rowKey), item]));
+  return {
+    ...trip,
+    expenses: (Array.isArray(trip.expenses) ? trip.expenses : []).map(expense => {
+      const result = byId.get(String(expense.id));
+      return result ? { ...expense, category: result.category, categoryConfidence: Number(result.confidence) || 0 } : expense;
+    }),
+    expenseAnalysis: {
+      version: 1,
+      categories: EXPENSE_CATEGORIES,
+      analyzedAt: rows.reduce((latest, item) => item.analyzedAt > latest ? item.analyzedAt : latest, ''),
+      analyzedExpenseCount: rows.length,
+      source: 'azure-openai'
+    }
+  };
+}
 
 function newTripId() {
   // URL 安全、不可猜测的短 id
@@ -212,6 +276,39 @@ async function callOpenAIMessages(messages, maxTokens) {
   const content = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
   if (!content) throw new Error('OpenAI 返回为空');
   return JSON.parse(content);
+}
+
+const EXPENSE_CATEGORIES = ['餐饮', '交通', '住宿', '游玩', '购物', '其他'];
+
+function normalizeExpenseClassifications(expenses, response) {
+  const expenseIds = new Set((Array.isArray(expenses) ? expenses : []).map(item => String(item && item.id || '')).filter(Boolean));
+  const rows = Array.isArray(response && response.classifications) ? response.classifications : [];
+  const byId = new Map();
+  rows.forEach(row => {
+    const id = String(row && row.id || '');
+    const category = String(row && row.category || '');
+    if (!expenseIds.has(id) || !EXPENSE_CATEGORIES.includes(category) || byId.has(id)) return;
+    const confidence = Math.max(0, Math.min(1, Number(row.confidence) || 0));
+    byId.set(id, { id, category, confidence: Math.round(confidence * 100) / 100 });
+  });
+  return [...expenseIds].map(id => byId.get(id) || { id, category: '其他', confidence: 0 });
+}
+
+async function classifyExpensesWithLLM(expenses, invoke = callOpenAIMessages) {
+  const input = (Array.isArray(expenses) ? expenses : []).filter(item => item && item.id).map(item => ({
+    id: String(item.id),
+    amount: Number(item.amount) || 0,
+    note: String(item.note || '').slice(0, 200)
+  }));
+  if (!input.length) return [];
+  const response = await invoke([
+    {
+      role: 'system',
+      content: `你是旅行消费分类器。只输出 JSON。必须且只能使用这些类别：${EXPENSE_CATEGORIES.join('、')}。\n分类原则：餐饮包含正餐、零食、饮料；交通包含机票、租车、打车、过路费、停车、充电；住宿包含酒店、民宿；游玩包含门票、体验、娱乐；购物包含纪念品、衣物和非即时消费商品；无法判断归入其他。不要根据付款人分类。返回 {"classifications":[{"id":"原始ID","category":"类别","confidence":0到1}]}，每个输入 ID 恰好返回一次。`
+    },
+    { role: 'user', content: JSON.stringify({ expenses: input }) }
+  ], 3000);
+  return normalizeExpenseClassifications(input, response);
 }
 
 async function callOpenAI(text) {
@@ -701,9 +798,10 @@ app.http('generateTrip', {
 
     const tripId = newTripId();
     const c = client(); await ensureTable(c);
+    const encoded = encodeTripData(tripForStorage(trip));
     await c.upsertEntity({
       partitionKey: PK, rowKey: tripId,
-      data: JSON.stringify(trip).slice(0, 60000),
+      ...encoded,
       createdAt: new Date().toISOString()
     }, 'Replace');
 
@@ -720,7 +818,8 @@ app.http('getTrip', {
     const c = client(); await ensureTable(c);
     try {
       const e = await c.getEntity(PK, id);
-      return { jsonBody: { trip: ensureIds(JSON.parse(e.data)) } };
+      const trip = ensureIds(decodeTripData(e));
+      return { jsonBody: { trip: await applyExpenseAnalysis(id, trip) } };
     } catch {
       return { status: 404, jsonBody: { error: 'not found' } };
     }
@@ -736,14 +835,45 @@ app.http('putTrip', {
     let b;
     try { b = await req.json(); } catch { return { status: 400, jsonBody: { error: 'invalid json' } }; }
     if (!b || typeof b.trip !== 'object') return { status: 400, jsonBody: { error: 'missing trip' } };
-    const trip = ensureIds(b.trip);
+    const trip = ensureIds(tripForStorage(b.trip));
     const c = client(); await ensureTable(c);
+    const encoded = encodeTripData(trip);
     await c.upsertEntity({
       partitionKey: PK, rowKey: id,
-      data: JSON.stringify(trip).slice(0, 60000),
+      ...encoded,
       updatedAt: new Date().toISOString()
     }, 'Merge');
     return { jsonBody: { ok: true } };
+  }
+});
+
+// ---- POST /api/trips/{tripId}/expenses/classify ----
+app.http('classifyTripExpenses', {
+  methods: ['POST'], authLevel: 'anonymous', route: 'trips/{tripId}/expenses/classify',
+  handler: async (req) => {
+    const id = req.params.tripId;
+    if (!id) return { status: 400, jsonBody: { error: 'missing tripId' } };
+    let b;
+    try { b = await req.json(); } catch { return { status: 400, jsonBody: { error: 'invalid json' } }; }
+    if (!b || !b.trip || typeof b.trip !== 'object') return { status: 400, jsonBody: { error: 'missing trip' } };
+    const expenses = Array.isArray(b.trip.expenses) ? b.trip.expenses : [];
+    try {
+      await checkRateLimit(clientIp(req));
+      const classifications = await classifyExpensesWithLLM(expenses);
+      const analyzedAt = await writeExpenseAnalysis(id, classifications);
+      const trip = {
+        ...b.trip,
+        expenses: expenses.map(expense => {
+          const result = classifications.find(item => item.id === String(expense.id));
+          return result ? { ...expense, category: result.category, categoryConfidence: result.confidence } : expense;
+        }),
+        expenseAnalysis: { version: 1, categories: EXPENSE_CATEGORIES, analyzedAt, analyzedExpenseCount: classifications.length, source: 'azure-openai' }
+      };
+      return { jsonBody: { trip, classifications } };
+    } catch (e) {
+      if (e instanceof RateLimitError) return { status: 429, jsonBody: { error: e.message } };
+      return { status: 502, jsonBody: { error: '智能分类失败：' + e.message } };
+    }
   }
 });
 
@@ -1569,9 +1699,10 @@ app.http('executeTripTools', {
     }
 
     const c = client(); await ensureTable(c);
+    const encoded = encodeTripData(tripForStorage(trip));
     await c.upsertEntity({
       partitionKey: PK, rowKey: id,
-      data: JSON.stringify(trip).slice(0, 60000),
+      ...encoded,
       updatedAt: new Date().toISOString()
     }, 'Merge');
 
@@ -1580,18 +1711,26 @@ app.http('executeTripTools', {
 });
 
 module.exports.__test = {
+  EXPENSE_CATEGORIES,
+  applyExpenseAnalysis,
   attachGenerationNotes,
   answerReadOnlyQuestion,
   buildTripContextSummary,
   buildChatResponse,
   collectionDeleteToolCallsFromText,
   executeToolCall,
+  ensureIds,
   extractTripPlaces,
   generateValidatedTrip,
   hasExplicitMutationIntent,
   itineraryForDate,
   latestUserText,
   needsReadOnlyRetry,
+  normalizeExpenseClassifications,
   processChatLocally,
+  classifyExpensesWithLLM,
+  decodeTripData,
+  encodeTripData,
+  tripForStorage,
   stripClientChatGuard
 };

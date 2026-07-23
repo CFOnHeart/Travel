@@ -88,6 +88,62 @@ export function settlementTransfers(people = [], expenses = []) {
   return transfers;
 }
 
+export function expenseCategorySummary(expenses = [], categories = []) {
+  const allowed = new Set(categories);
+  const totals = new Map(categories.map(category => [category, 0]));
+  expenses.forEach(expense => {
+    const category = allowed.has(expense && expense.category) ? expense.category : '其他';
+    if (!totals.has(category)) totals.set(category, 0);
+    totals.set(category, totals.get(category) + cents(expense && expense.amount));
+  });
+  const totalCents = [...totals.values()].reduce((sum, amount) => sum + amount, 0);
+  return [...totals.entries()].map(([category, amount]) => ({
+    category,
+    amount: money(amount),
+    percentage: totalCents ? Math.round(amount / totalCents * 1000) / 10 : 0
+  })).filter(item => item.amount > 0);
+}
+
+export function personSpendingSummary(people = [], expenses = []) {
+  const { total, stats } = expenseLedger(people, expenses);
+  return people.map(person => {
+    const stat = stats[person.id] || { paid: 0, owed: 0 };
+    return {
+      personId: person.id,
+      name: person.name || '未命名',
+      paid: stat.paid,
+      owed: stat.owed,
+      paidPercentage: total ? Math.round(stat.paid / total * 1000) / 10 : 0,
+      owedPercentage: total ? Math.round(stat.owed / total * 1000) / 10 : 0
+    };
+  });
+}
+
+export function personCategorySummaries(people = [], expenses = [], categories = []) {
+  const allowed = new Set(categories);
+  const rows = expenses.map(expense => normalizeExpense(expense, people));
+  return people.map(person => {
+    const amounts = new Map(categories.map(category => [category, 0]));
+    rows.forEach(expense => {
+      const share = expense.allocations.find(item => item.personId === person.id);
+      if (!share) return;
+      const category = allowed.has(expense.category) ? expense.category : '其他';
+      amounts.set(category, (amounts.get(category) || 0) + cents(share.amount));
+    });
+    const totalCents = [...amounts.values()].reduce((sum, amount) => sum + amount, 0);
+    return {
+      personId: person.id,
+      name: person.name || '未命名',
+      total: money(totalCents),
+      categories: [...amounts.entries()].map(([category, amount]) => ({
+        category,
+        amount: money(amount),
+        percentage: totalCents ? Math.round(amount / totalCents * 1000) / 10 : 0
+      })).filter(item => item.amount > 0)
+    };
+  });
+}
+
 export function spreadTimelinePositions(positions = [], minimumGap = 92) {
   let previous = -minimumGap;
   return positions.map(position => {
