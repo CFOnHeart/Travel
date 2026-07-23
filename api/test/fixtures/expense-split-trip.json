@@ -1,0 +1,45 @@
+{
+  "people": [
+    { "id": "person-a", "name": "A" },
+    { "id": "person-b", "name": "B" },
+    { "id": "person-c", "name": "C" }
+  ],
+  "expenses": [
+    {
+      "id": "expense-dinner",
+      "personId": "person-b",
+      "payerId": "person-b",
+      "amount": 300,
+      "note": "晚餐",
+      "time": "2026-07-21T11:00:00.000Z",
+      "participantIds": ["person-a", "person-b", "person-c"],
+      "splitMode": "equal",
+      "allocations": [
+        { "personId": "person-a", "amount": 100 },
+        { "personId": "person-b", "amount": 100 },
+        { "personId": "person-c", "amount": 100 }
+      ]
+    },
+    {
+      "id": "expense-taxi",
+      "personId": "person-a",
+      "payerId": "person-a",
+      "amount": 80,
+      "note": "打车",
+      "time": "2026-07-21T12:00:00.000Z",
+      "participantIds": ["person-a", "person-c"],
+      "splitMode": "custom",
+      "allocations": [
+        { "personId": "person-a", "amount": 30 },
+        { "personId": "person-c", "amount": 50 }
+      ]
+    },
+    {
+      "id": "expense-legacy",
+      "personId": "person-c",
+      "amount": 100,
+      "note": "历史门票",
+      "time": "2026-07-20T03:00:00.000Z"
+    }
+  ]
+}

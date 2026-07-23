@@ -11,3 +11,9 @@ api/local.settings.json
 .azure/
 bin/
 obj/
+
+# Local production-data backups and deployment artifacts
+.trip-backups/
+.tmp-yunnan2026-expense-baseline.json
+.deploy-api/
+api-linuxpaths-*.zip

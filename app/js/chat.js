@@ -79,6 +79,9 @@ export function initChat(ctx) {
     if (call.action === 'expense.add') return [
       { name: 'personName', label: '付款人', type: 'select', required: true, options: people },
       { name: 'amount', label: '金额', type: 'number', required: true },
+      { name: 'participantNames', label: '参与人 JSON', type: 'json', required: false },
+      { name: 'splitMode', label: '分摊方式', type: 'select', required: false, options: ['equal', 'custom'] },
+      { name: 'allocations', label: '自定义分摊 JSON', type: 'json', required: false },
       { name: 'time', label: '时间', type: 'datetime-local', required: true },
       { name: 'note', label: '说明', type: 'text', required: false }
     ];
@@ -87,6 +90,9 @@ export function initChat(ctx) {
       { name: 'expenseId', label: '花销 ID', type: 'text', required: false },
       { name: 'personName', label: '付款人', type: 'select', required: false, options: people },
       { name: 'amount', label: '金额', type: 'number', required: false },
+      { name: 'participantNames', label: '参与人 JSON', type: 'json', required: false },
+      { name: 'splitMode', label: '分摊方式', type: 'select', required: false, options: ['equal', 'custom'] },
+      { name: 'allocations', label: '自定义分摊 JSON', type: 'json', required: false },
       { name: 'time', label: '时间', type: 'datetime-local', required: false },
       { name: 'note', label: '说明', type: 'text', required: false }
     ];

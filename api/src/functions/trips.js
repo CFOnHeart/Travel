@@ -788,11 +788,25 @@ function expenseSummary(trip) {
   const expenses = Array.isArray(trip.expenses) ? trip.expenses : [];
   const total = expenses.reduce((sum, item) => sum + (Number(item && item.amount) || 0), 0);
   const byPerson = new Map();
+  const owedByPerson = new Map();
   expenses.forEach(item => {
-    const name = people.get(item && item.personId) || '未指定人员';
+    const name = people.get(item && (item.payerId || item.personId)) || '未指定人员';
     byPerson.set(name, (byPerson.get(name) || 0) + (Number(item && item.amount) || 0));
+    let allocations = Array.isArray(item && item.allocations) && item.allocations.length ? item.allocations : null;
+    if (!allocations) {
+      const payerId = item && (item.payerId || item.personId);
+      const ids = Array.isArray(item && item.participantIds) && item.participantIds.length ? item.participantIds : [payerId].filter(Boolean);
+      const totalCents = Math.round((Number(item && item.amount) || 0) * 100);
+      const base = ids.length ? Math.floor(totalCents / ids.length) : 0;
+      let remainder = totalCents - base * ids.length;
+      allocations = ids.map(personId => ({ personId, amount: (base + (remainder-- > 0 ? 1 : 0)) / 100 }));
+    }
+    allocations.forEach(allocation => {
+      const participant = people.get(allocation.personId) || '未指定人员';
+      owedByPerson.set(participant, (owedByPerson.get(participant) || 0) + (Number(allocation.amount) || 0));
+    });
   });
-  return { total, byPerson: Array.from(byPerson.entries()) };
+  return { total, byPerson: Array.from(byPerson.entries()), owedByPerson: Array.from(owedByPerson.entries()) };
 }
 
 function money(value) {
@@ -851,7 +865,7 @@ function buildTripContextSummary(trip) {
     `会经过/涉及地点：${places.length ? places.join('、') : '当前行程未明确地点'}`,
     `未完成预定：${pending.length ? pending.map(item => `${item.group} / ${item.name}${item.meta ? `（${item.meta}）` : ''}`).join('；') : '无'}`,
     `出行物品：${packing.length ? packing.join('；') : '无'}`,
-    `花销合计：¥${money(expenses.total)}${expenses.byPerson.length ? `；按人：${expenses.byPerson.map(([name, amount]) => `${name} ¥${money(amount)}`).join('，')}` : ''}`
+    `花销合计：¥${money(expenses.total)}${expenses.byPerson.length ? `；实际付款：${expenses.byPerson.map(([name, amount]) => `${name} ¥${money(amount)}`).join('，')}` : ''}${expenses.owedByPerson.length ? `；实际承担：${expenses.owedByPerson.map(([name, amount]) => `${name} ¥${money(amount)}`).join('，')}` : ''}`
   ].join('\n');
 }
 
@@ -886,8 +900,9 @@ function answerReadOnlyQuestion(trip, userText) {
   if (/(一共|总共|合计|总花销|花了多少|多少钱|费用|花销)/.test(text) && /(花|钱|费用|花销|合计|总共|一共)/.test(text)) {
     const summary = expenseSummary(trip);
     if (!summary.total) return '目前还没有记录花销，所以合计是 0 元。';
-    const people = summary.byPerson.length ? `；按人：${summary.byPerson.map(([name, amount]) => `${name} ¥${money(amount)}`).join('，')}` : '';
-    return `目前已记录花销合计 ¥${money(summary.total)}${people}。`;
+    const paid = summary.byPerson.length ? `；实际付款：${summary.byPerson.map(([name, amount]) => `${name} ¥${money(amount)}`).join('，')}` : '';
+    const owed = summary.owedByPerson.length ? `；实际承担：${summary.owedByPerson.map(([name, amount]) => `${name} ¥${money(amount)}`).join('，')}` : '';
+    return `目前已记录花销合计 ¥${money(summary.total)}${paid}${owed}。`;
   }
 
   return null;
@@ -912,7 +927,7 @@ ${JSON.stringify(trip)}
 - checklist[]: 预定清单分组 { group, icon, items:[{id,name,meta,done,who}] }
 - packing[]: 出行物品分组 { group, icon, items:[{id,name,meta}] }
 - people[]: 花销同行人 [{id,name}]
-- expenses[]: 花销 [{id,personId,amount,note,time}]
+- expenses[]: 花销 [{id,personId,payerId,amount,note,time,participantIds,splitMode,allocations:[{personId,amount}]}]。personId 是兼容字段，与 payerId 都表示付款人。
 
 你可以帮用户对以上任意部分做「增、删、改、查」。只读问题必须直接基于当前行程摘要和完整 JSON 回答。
 
@@ -932,7 +947,7 @@ ${JSON.stringify(trip)}
       "action": "expense.item",
       "title": "修改花销",
       "message": "时间默认当前时间，说明为空，可在确认前修改。",
-      "args": { "operation": "add|update|delete", "expenseId": "已有花销 id，可空", "personName": "付款人姓名", "amount": 128, "time": "ISO 时间", "note": "说明" }
+      "args": { "operation": "add|update|delete", "expenseId": "已有花销 id，可空", "personName": "付款人姓名", "amount": 128, "time": "ISO 时间", "note": "说明", "participantNames": ["参与人姓名"], "splitMode": "equal|custom", "allocations": [{"personName":"姓名","amount":64}] }
     },
     {
       "action": "trip.timelineItem",
@@ -972,6 +987,7 @@ ${JSON.stringify(trip)}
 - 如果删除目标有多个相近候选，不要用纯文本询问；请为每个候选分别返回一个 operation="delete" 的 toolCall，并在 message 里写清楚候选名称、所在模块和分组。前端会用多张卡片让用户勾选要执行的删除项。
 - 每次有修改时，focus 设为对应面板（行程=trip、预定清单=booking、出行物品=packing、花销=expense），并在 reply 末尾用一句话提示去哪个标签查看，例如「👉 请在「💰 花销」标签查看」。
 - 花销的 personId 必须对应 people 中已存在的人；用户提到的人不存在时可先在 people 新增。
+- 用户没有说明承担人时，participantNames 默认所有 people，splitMode 默认 equal；用户说明「仅自己」时只选择付款人。custom 分摊的 allocations 金额合计必须等于花销金额。
 - 新增/修改/删除花销必须使用 toolCalls，不要直接修改 updatedTrip.expenses：
   1. 用户要添加/记录/新增/修改/删除一笔花销时，返回 action="expense.item" 的 toolCall，updatedTrip=null，focus=null。
   2. amount 和 personName 如果能从用户话里识别就填入；无法识别就留空字符串，让前端确认框要求用户补充。
@@ -1204,6 +1220,33 @@ function parseToolTime(value) {
   return date.toISOString();
 }
 
+function expenseSplitArgs(trip, args, amount) {
+  const people = Array.isArray(trip.people) ? trip.people : [];
+  const names = Array.isArray(args.participantNames) && args.participantNames.length
+    ? args.participantNames.map(name => String(name || '').trim()).filter(Boolean)
+    : people.map(person => person.name);
+  const participantIds = [...new Set(names.map(name => findPersonByName(trip, name)).filter(Boolean).map(person => person.id))];
+  if (!participantIds.length) throw new Error('请至少选择一位参与人');
+  const mode = args.splitMode === 'custom' ? 'custom' : 'equal';
+  let allocations;
+  if (mode === 'custom') {
+    allocations = (Array.isArray(args.allocations) ? args.allocations : []).map(item => {
+      const person = findPersonByName(trip, item && item.personName);
+      if (!person || !participantIds.includes(person.id)) throw new Error('自定义分摊包含无效参与人');
+      return { personId: person.id, amount: Number(item.amount) };
+    });
+    if (allocations.some(item => !Number.isFinite(item.amount) || item.amount < 0)) throw new Error('自定义分摊金额无效');
+    const total = allocations.reduce((sum, item) => sum + item.amount, 0);
+    if (Math.abs(total - amount) > 0.005) throw new Error('自定义分摊金额合计必须等于花销金额');
+  } else {
+    const totalCents = Math.round(amount * 100);
+    const base = Math.floor(totalCents / participantIds.length);
+    let remainder = totalCents - base * participantIds.length;
+    allocations = participantIds.map(personId => ({ personId, amount: (base + (remainder-- > 0 ? 1 : 0)) / 100 }));
+  }
+  return { participantIds, splitMode: mode, allocations };
+}
+
 function executeExpenseAdd(trip, args = {}) {
   const amount = Number(args.amount);
   if (!Number.isFinite(amount) || amount <= 0) throw new Error('金额必须是大于 0 的数字');
@@ -1214,12 +1257,15 @@ function executeExpenseAdd(trip, args = {}) {
   trip.expenses = Array.isArray(trip.expenses) ? trip.expenses : [];
   const note = String(args.note || '').trim().slice(0, 200);
   const time = parseToolTime(args.time);
+  const split = expenseSplitArgs(trip, args, amount);
   trip.expenses.push({
     id: newTripId(),
     personId: person.id,
+    payerId: person.id,
     amount,
     note,
-    time
+    time,
+    ...split
   });
   return { message: `已添加花销：${person.name} ¥${amount}${note ? `，${note}` : ''}。`, focus: 'expense' };
 }
@@ -1244,9 +1290,13 @@ function executeExpenseItem(trip, args = {}) {
     const person = findPersonByName(trip, args.personName);
     if (!person) throw new Error(`找不到付款人「${args.personName || ''}」`);
     expense.personId = person.id;
+    expense.payerId = person.id;
   }
   if (args.time !== undefined && args.time !== '') expense.time = parseToolTime(args.time);
   if (args.note !== undefined) expense.note = String(args.note || '').trim().slice(0, 200);
+  if (args.amount !== undefined || args.participantNames !== undefined || args.splitMode !== undefined || args.allocations !== undefined) {
+    Object.assign(expense, expenseSplitArgs(trip, args, Number(expense.amount)));
+  }
   return { message: '已更新花销。', focus: 'expense' };
 }
 

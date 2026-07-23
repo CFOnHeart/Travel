@@ -7,6 +7,7 @@ import {
 import { initEditor, setEditorData } from './editor.js';
 import { initChat } from './chat.js';
 import { initPhotos, renderPhotosPanel } from './photos.js';
+import { expenseLedger, normalizeExpense, settlementTransfers, spreadTimelinePositions } from './expense-model.js';
 
 const PANELS = ['trip', 'booking', 'packing', 'expense', 'photos'];
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
@@ -40,18 +41,39 @@ function renderAll() {
 function renderExpense() {
   const people = trip.people = trip.people || [];
   const expenses = trip.expenses = trip.expenses || [];
-  const grand = expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+  const ledger = expenseLedger(people, expenses);
+  const selectedId = people.some(person => person.id === trip.expenseViewerId) ? trip.expenseViewerId : (people[0] && people[0].id);
+  trip.expenseViewerId = selectedId || '';
+  const selected = ledger.stats[selectedId] || { paid: 0, owed: 0, balance: 0 };
   $('#mpanel-expense').innerHTML = `
     <div class="exp-head">
       <h2>💰 花销统计</h2>
-      <p class="sub">纵轴是时间轴，看得到每笔花销的时间走势</p>
-      <div class="exp-grand">总花销 ¥${fmtMoney(grand)}</div>
+      <p class="sub">同时记录谁付款、谁承担，以及每个人最终应该收付的金额</p>
     </div>
-    <div class="exp-hint">💡 先「＋ 添加人员」，再为每人「＋ 添加」记一笔。纵轴为时间轴，可查看花钱的时间走势；把鼠标移到看板上还能看到该时刻的<b>累计花销</b>；每列顶部显示每人的<b>总花销</b>。</div>
-    <div class="exp-toolbar"><button class="tool-btn primary" id="addPersonBtn" type="button">＋ 添加人员</button></div>
-    <div id="expBoard"></div>`;
+    <div class="exp-viewer-row">
+      <label for="expenseViewer">当前查看人</label>
+      <select id="expenseViewer">${people.map(person => `<option value="${esc(person.id)}" ${person.id === selectedId ? 'selected' : ''}>${esc(person.name || '未命名')}</option>`).join('')}</select>
+      <button class="tool-btn primary" id="addPersonBtn" type="button">＋ 添加人员</button>
+      <button class="tool-btn" id="addExpenseBtn" type="button" ${people.length ? '' : 'disabled'}>＋ 记一笔</button>
+    </div>
+    <div class="exp-summary-grid">
+      ${summaryCard('总支出', ledger.total, '全部已记录消费')}
+      ${summaryCard('我的实际付款', selected.paid, '实际垫付金额')}
+      ${summaryCard('我的应承担', selected.owed, '参与订单中的份额')}
+      ${summaryCard(selected.balance >= 0 ? '我的应收' : '我的应付', Math.abs(selected.balance), selected.balance >= 0 ? '其他人应还给我' : '我需要还给其他人', selected.balance >= 0 ? 'positive' : 'negative')}
+    </div>
+    <div class="exp-hint">💡 历史花销未设置承担人时，默认只由付款人自己承担；点击时间序列订单或表格中的「编辑」可补充实际参与人。</div>
+    <div class="exp-view-tabs" role="tablist">
+      <button class="active" type="button" data-exp-view="timeline">时间序列</button>
+      <button type="button" data-exp-view="tables">表格明细</button>
+    </div>
+    <div id="expTimelineView" class="exp-view-panel active"><div id="expBoard"></div></div>
+    <div id="expTablesView" class="exp-view-panel"></div>`;
 
   $('#addPersonBtn').addEventListener('click', addPerson);
+  $('#addExpenseBtn').addEventListener('click', () => { expModalPerson = selectedId; openExpModal(); });
+  if ($('#expenseViewer')) $('#expenseViewer').addEventListener('change', event => { trip.expenseViewerId = event.target.value; renderExpense(); });
+  $$('.exp-view-tabs button').forEach(button => button.addEventListener('click', () => switchExpenseView(button.dataset.expView)));
 
   if (!people.length) {
     $('#expBoard').innerHTML = `
@@ -60,7 +82,18 @@ function renderExpense() {
       <p class="ee-sub">点击上方「＋ 添加人员」，添加后即可为每个人记录花销，并在时间轴上查看走势与累计。</p></div>`;
     return;
   }
-  buildBoard(people, expenses);
+  buildBoard(people, ledger.rows);
+  buildExpenseTables(people, ledger);
+}
+
+function summaryCard(label, value, hint, tone = '') {
+  return `<article class="exp-summary-card ${tone}"><span>${label}</span><strong>¥${fmtMoney(value)}</strong><small>${hint}</small></article>`;
+}
+
+function switchExpenseView(view) {
+  $$('.exp-view-tabs button').forEach(button => button.classList.toggle('active', button.dataset.expView === view));
+  $('#expTimelineView').classList.toggle('active', view === 'timeline');
+  $('#expTablesView').classList.toggle('active', view === 'tables');
 }
 
 function addPerson() {
@@ -73,7 +106,7 @@ function addPerson() {
 }
 
 // ---- 时间轴看板（动态人员，纵轴=时间，每人一列泳道）----
-const AXIS = { height: 560, top: 10, ticks: 6 };
+const AXIS = { height: 560, top: 10, ticks: 6, cardGap: 92 };
 function fmtMoney(n) { return (Math.round((Number(n) || 0) * 100) / 100).toString(); }
 function fmtTime(t) { const d = new Date(t); if (isNaN(d)) return ''; const p = n => String(n).padStart(2, '0'); return `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; }
 function fmtTick(t) { const d = new Date(t); const p = n => String(n).padStart(2, '0'); return `${p(d.getMonth() + 1)}-${p(d.getDate())}<br>${p(d.getHours())}:${p(d.getMinutes())}`; }
@@ -84,7 +117,7 @@ function buildBoard(people, expenses) {
   const cols = `66px repeat(${people.length}, minmax(140px, 1fr))`;
 
   const totals = {};
-  people.forEach(p => { totals[p.id] = expenses.filter(e => e.personId === p.id).reduce((s, e) => s + (Number(e.amount) || 0), 0); });
+  people.forEach(p => { totals[p.id] = expenses.filter(e => e.payerId === p.id).reduce((s, e) => s + (Number(e.amount) || 0), 0); });
 
   // 头部行：轴角占位 + 每人一列（姓名/总额/添加/删除）
   const headRow = document.createElement('div');
@@ -96,7 +129,7 @@ function buildBoard(people, expenses) {
     head.className = 'p-head';
     head.innerHTML =
       `<div class="p-name"><input class="person-name" placeholder="姓名"></div>` +
-      `<div class="p-total">¥${fmtMoney(totals[p.id])} <small>总花销</small></div>` +
+      `<div class="p-total">¥${fmtMoney(totals[p.id])} <small>实际付款</small></div>` +
       `<div style="display:flex;gap:6px;">` +
       `<button class="add-exp" type="button" style="flex:1;">＋ 添加</button>` +
       `<button class="person-del" type="button" title="删除人员" style="background:none;border:1px solid var(--line);border-radius:9px;cursor:pointer;padding:0 8px;">🗑️</button>` +
@@ -108,7 +141,7 @@ function buildBoard(people, expenses) {
     head.querySelector('.person-del').addEventListener('click', () => {
       if (!confirm('删除该人员及其所有花销记录？')) return;
       trip.people = trip.people.filter(x => x.id !== p.id);
-      trip.expenses = (trip.expenses || []).filter(e => e.personId !== p.id);
+      trip.expenses = (trip.expenses || []).filter(e => (e.payerId || e.personId) !== p.id).map(e => ({ ...e, participantIds: (e.participantIds || []).filter(id => id !== p.id), allocations: (e.allocations || []).filter(a => a.personId !== p.id) }));
       renderExpense();
       queueSave();
     });
@@ -130,7 +163,8 @@ function buildBoard(people, expenses) {
   let max = Math.max(...times);
   if (!(max > min)) max = min + 3600000;
 
-  const H = AXIS.height, top0 = AXIS.top, N = AXIS.ticks;
+  const maxLaneItems = Math.max(1, ...people.map(person => expenses.filter(expense => expense.payerId === person.id).length));
+  const H = Math.max(AXIS.height, maxLaneItems * AXIS.cardGap + 70), top0 = AXIS.top, N = AXIS.ticks;
   const usable = H - 60;
   const posOf = t => top0 + ((t - min) / (max - min)) * usable;
 
@@ -159,32 +193,43 @@ function buildBoard(people, expenses) {
   body.appendChild(axis);
 
   // 每人一条泳道，按时间比例定位
+  let maxVisualTop = H - 60;
   people.forEach(p => {
     const lane = document.createElement('div');
     lane.className = 'exp-lane';
-    expenses.filter(e => e.personId === p.id)
-      .sort((a, b) => new Date(a.time) - new Date(b.time))
-      .forEach(e => {
+    const laneExpenses = expenses.filter(e => e.payerId === p.id).sort((a, b) => new Date(a.time) - new Date(b.time));
+    const visualPositions = spreadTimelinePositions(laneExpenses.map(e => posOf(new Date(e.time).getTime())), AXIS.cardGap);
+    laneExpenses.forEach((e, expenseIndex) => {
         const t = new Date(e.time).getTime();
         if (isNaN(t)) return;
         const item = document.createElement('div');
         item.className = 'exp-dot-item';
-        item.style.top = posOf(t) + 'px';
+        const visualTop = visualPositions[expenseIndex];
+        maxVisualTop = Math.max(maxVisualTop, visualTop);
+        item.style.top = visualTop + 'px';
+        const participantNames = e.allocations.map(allocation => (people.find(person => person.id === allocation.personId) || {}).name).filter(Boolean);
         item.innerHTML =
           '<span class="dot"></span>' +
-          '<div class="e-card"><span class="e-del" title="删除">✕</span>' +
+          `<button class="e-edit" type="button" title="编辑${esc(e.note || '这笔花销')}">编辑</button>` +
+          '<div class="e-card"><button class="e-del" type="button" title="删除">✕</button>' +
           `<div class="e-amt">¥${fmtMoney(e.amount)}</div>` +
           (e.note ? `<div class="e-note">${esc(e.note)}</div>` : '') +
+          `<div class="e-shares">承担：${esc(participantNames.join('、') || '待确认')}</div>` +
           `<div class="e-time">🕒 ${esc(fmtTime(e.time))}</div></div>`;
         item.querySelector('.e-del').addEventListener('click', () => {
           trip.expenses = (trip.expenses || []).filter(x => x.id !== e.id);
           renderExpense();
           queueSave();
         });
+        item.querySelector('.e-edit').addEventListener('click', () => openExpModal(e.id));
+        item.querySelector('.e-card').addEventListener('click', event => {
+          if (!event.target.closest('.e-del')) openExpModal(e.id);
+        });
         lane.appendChild(item);
       });
     body.appendChild(lane);
   });
+  body.style.height = Math.max(H, maxVisualTop + AXIS.cardGap) + 'px';
 
   board.appendChild(body);
 
@@ -215,6 +260,26 @@ function buildBoard(people, expenses) {
     hoverTotal.style.display = 'block';
   });
   body.addEventListener('mouseleave', hide);
+}
+
+function buildExpenseTables(people, ledger) {
+  const names = Object.fromEntries(people.map(person => [person.id, person.name || '未命名']));
+  const chronological = [...ledger.rows].sort((a, b) => new Date(a.time) - new Date(b.time));
+  const detailRows = chronological.map(expense => `<tr>
+    <td>${esc(fmtTime(expense.time))}</td><td>${esc(expense.note || '未填写说明')}</td>
+    <td>${esc(names[expense.payerId] || '未知')}</td>
+    <td>${expense.allocations.map(item => `${esc(names[item.personId] || '未知')} ¥${fmtMoney(item.amount)}`).join('<br>')}</td>
+    <td class="money">¥${fmtMoney(expense.amount)}</td><td><button class="expense-edit-btn" type="button" data-expense-id="${esc(expense.id)}">编辑</button></td>
+  </tr>`).join('');
+  const personTables = people.map(person => {
+    const stat = ledger.stats[person.id];
+    const rows = stat.orders.map(order => `<tr><td>${esc(fmtTime(order.expense.time))}</td><td class="expense-order-cell"><span>${esc(order.expense.note || '未填写说明')}</span><button class="expense-edit-btn" type="button" data-expense-id="${esc(order.expense.id)}">编辑</button></td><td class="money">¥${fmtMoney(order.expense.amount)}</td><td>${esc(names[order.expense.payerId] || '未知')}</td><td class="money">¥${fmtMoney(order.share)}</td></tr>`).join('');
+    return `<section class="person-exp-table"><header><div><span>个人账单</span><h3>${esc(person.name || '未命名')}</h3></div><div class="person-exp-totals"><b>实际付款 ¥${fmtMoney(stat.paid)}</b><b>实际花销 ¥${fmtMoney(stat.owed)}</b></div></header>
+      <div class="exp-table-scroll"><table><thead><tr><th>时间</th><th>订单</th><th>订单金额</th><th>付款人</th><th>自己承担</th></tr></thead><tbody>${rows || '<tr><td colspan="5" class="empty-cell">尚未参与任何订单</td></tr>'}</tbody></table></div></section>`;
+  }).join('');
+  const transfers = settlementTransfers(people, ledger.rows).map(item => `<li><b>${esc(names[item.fromId])}</b><span>支付给</span><b>${esc(names[item.toId])}</b><strong>¥${fmtMoney(item.amount)}</strong></li>`).join('');
+  $('#expTablesView').innerHTML = `<section class="expense-table-card"><header><span>全部流水</span><h3>按时间顺序</h3></header><div class="exp-table-scroll"><table><thead><tr><th>时间</th><th>消费</th><th>付款人</th><th>承担人与金额</th><th>总额</th><th></th></tr></thead><tbody>${detailRows || '<tr><td colspan="6" class="empty-cell">还没有花销记录</td></tr>'}</tbody></table></div></section>${personTables}<section class="expense-table-card settlement-card"><header><span>建议结算</span><h3>最少转账方案</h3></header><ul>${transfers || '<li class="settled">当前所有人的账目已平衡</li>'}</ul></section>`;
+  $$('#expTablesView .expense-edit-btn').forEach(button => button.addEventListener('click', () => openExpModal(button.dataset.expenseId)));
 }
 
 // ---- Tab 切换 ----
@@ -283,33 +348,129 @@ function wireChecklist() {
 
 // ---- 花销弹窗 ----
 let expModalPerson = null;
+let editingExpenseId = null;
 
-function openExpModal() {
-  const p = (trip.people || []).find(x => x.id === expModalPerson);
-  $('#expPerson').textContent = p ? ('为「' + (p.name || '') + '」记一笔') : '';
-  $('#expAmount').value = '';
-  $('#expNote').value = '';
+function openExpModal(expenseId = null) {
+  const people = trip.people || [];
+  editingExpenseId = expenseId;
+  const source = expenseId ? (trip.expenses || []).find(item => item.id === expenseId) : null;
+  const expense = source ? normalizeExpense(source, people) : null;
+  const payerId = expense ? expense.payerId : expModalPerson;
+  const participantIds = expense ? expense.participantIds : people.map(person => person.id);
+  $('#expTitle').textContent = expense ? '编辑花销' : '记一笔';
+  $('#expPerson').textContent = expense && !source.participantIds && !source.allocations ? '旧数据默认由付款人自己承担，可在这里修改' : '记录付款人与实际承担人';
+  $('#expPayer').innerHTML = people.map(person => `<option value="${esc(person.id)}" ${person.id === payerId ? 'selected' : ''}>${esc(person.name || '未命名')}</option>`).join('');
+  $('#expParticipants').innerHTML = people.map(person => `<label><input type="checkbox" value="${esc(person.id)}" ${participantIds.includes(person.id) ? 'checked' : ''}> <span>${esc(person.name || '未命名')}</span></label>`).join('');
+  $('#expAmount').value = expense ? expense.amount : '';
+  $('#expNote').value = expense ? (expense.note || '') : '';
+  $(`input[name="expSplitMode"][value="${expense ? expense.splitMode : 'equal'}"]`).checked = true;
   const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-  $('#expTime').value = now.toISOString().slice(0, 16);
+  $('#expTime').value = expense ? toLocalDateTime(expense.time) : now.toISOString().slice(0, 16);
+  renderExpenseSplitEditor(expense && expense.splitMode === 'custom' ? expense.allocations : null);
   $('#expModal').classList.add('open');
   $('#expAmount').focus();
 }
 function closeExpModal() { $('#expModal').classList.remove('open'); }
 
+function selectedExpenseParticipants() {
+  return $$('#expParticipants input:checked').map(input => input.value);
+}
+
+function currentSplitMode() {
+  return ($('input[name="expSplitMode"]:checked') || {}).value || 'equal';
+}
+
+function renderExpenseSplitEditor(initialAllocations = null) {
+  const ids = selectedExpenseParticipants();
+  const people = trip.people || [];
+  const amount = Number($('#expAmount').value) || 0;
+  const custom = currentSplitMode() === 'custom';
+  const holder = $('#expCustomSplits');
+  holder.hidden = !custom;
+  if (custom) {
+    const previous = initialAllocations ? Object.fromEntries(initialAllocations.map(item => [item.personId, item.amount])) : Object.fromEntries($$('#expCustomSplits input').map(input => [input.dataset.personId, input.value]));
+    holder.innerHTML = ids.map(id => {
+      const person = people.find(item => item.id === id);
+      return `<label><span>${esc((person && person.name) || '未命名')}</span><input type="number" min="0" step="0.01" data-person-id="${esc(id)}" value="${esc(previous[id] || '')}" placeholder="0.00"></label>`;
+    }).join('');
+    $$('#expCustomSplits input').forEach(input => input.addEventListener('input', updateExpenseSplitSummary));
+  }
+  const summary = $('#expSplitSummary');
+  if (!ids.length) {
+    summary.textContent = '请至少选择一位参与人。';
+    summary.classList.add('invalid');
+  } else if (!custom) {
+    summary.textContent = amount > 0 ? `平均分摊：${ids.length} 人，每人约 ¥${fmtMoney(amount / ids.length)}` : `将由 ${ids.length} 位参与人平均分摊`;
+    summary.classList.remove('invalid');
+  }
+  else updateExpenseSplitSummary();
+}
+
+function updateExpenseSplitSummary() {
+  if (currentSplitMode() !== 'custom') { renderExpenseSplitEditor(); return; }
+  const amount = Number($('#expAmount').value) || 0;
+  const assigned = $$('#expCustomSplits input').reduce((sum, input) => sum + (Number(input.value) || 0), 0);
+  const remaining = Math.round((amount - assigned) * 100) / 100;
+  const summary = $('#expSplitSummary');
+  summary.textContent = remaining === 0 && amount > 0 ? `分摊完成：合计 ¥${fmtMoney(assigned)}` : `已分配 ¥${fmtMoney(assigned)}，还需分配 ¥${fmtMoney(remaining)}`;
+  summary.classList.toggle('invalid', remaining !== 0 || amount <= 0);
+}
+
+function expenseAllocations(amount, participantIds, mode) {
+  if (mode === 'custom') return $$('#expCustomSplits input').map(input => ({ personId: input.dataset.personId, amount: Number(input.value) || 0 }));
+  return normalizeExpense({ amount, payerId: $('#expPayer').value, participantIds }, trip.people || []).allocations;
+}
+
+function toLocalDateTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+  return date.toISOString().slice(0, 16);
+}
+
 function initExpenseModal() {
   $('#expCancel').addEventListener('click', closeExpModal);
   $('#expModal').addEventListener('click', e => { if (e.target.id === 'expModal') closeExpModal(); });
+  $('#expAmount').addEventListener('input', () => currentSplitMode() === 'custom' ? updateExpenseSplitSummary() : renderExpenseSplitEditor());
+  $('#expParticipants').addEventListener('change', () => renderExpenseSplitEditor());
+  $$('input[name="expSplitMode"]').forEach(input => input.addEventListener('change', () => renderExpenseSplitEditor()));
   $('#expSave').addEventListener('click', () => {
     const amount = Number($('#expAmount').value);
     if (!isFinite(amount) || amount <= 0) { $('#expAmount').focus(); return; }
+    const participantIds = selectedExpenseParticipants();
+    if (!participantIds.length) { $('#expSplitSummary').textContent = '请至少选择一位参与人。'; return; }
+    const splitMode = currentSplitMode();
+    const allocations = expenseAllocations(amount, participantIds, splitMode);
+    const allocated = allocations.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    const invalidAllocation = allocations.some(item => !Number.isFinite(item.amount) || item.amount < 0);
+    if (invalidAllocation || Math.abs(allocated - amount) > 0.005) {
+      const summary = $('#expSplitSummary');
+      updateExpenseSplitSummary();
+      summary.textContent = invalidAllocation
+        ? '每位参与人的承担金额必须是大于或等于 0 的数字。'
+        : `无法保存：参与人承担金额合计 ¥${fmtMoney(allocated)}，必须等于订单总价 ¥${fmtMoney(amount)}。`;
+      summary.classList.add('invalid');
+      const firstInvalid = $$('#expCustomSplits input').find(input => !Number.isFinite(Number(input.value)) || Number(input.value) < 0);
+      (firstInvalid || $('#expCustomSplits input'))?.focus();
+      return;
+    }
+    const payerId = $('#expPayer').value;
     trip.expenses = trip.expenses || [];
-    trip.expenses.push({
+    const nextExpense = {
       id: genId(),
-      personId: expModalPerson,
+      personId: payerId,
+      payerId,
       amount,
+      participantIds,
+      splitMode,
+      allocations,
       note: $('#expNote').value.trim().slice(0, 200),
       time: $('#expTime').value || new Date().toISOString()
-    });
+    };
+    if (editingExpenseId) {
+      const index = trip.expenses.findIndex(item => item.id === editingExpenseId);
+      if (index >= 0) trip.expenses[index] = { ...trip.expenses[index], ...nextExpense, id: editingExpenseId };
+    } else trip.expenses.push(nextExpense);
     closeExpModal();
     renderExpense();
     queueSave();
