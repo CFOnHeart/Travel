@@ -44,7 +44,8 @@ Travel/
 │       ├── upload.js          # POST /api/upload
 │       └── expenses.js        # GET/POST/DELETE /api/expenses
 ├── docs/
-│   └── azure-resources.md     # 后端资源创建文档
+│   ├── azure-resources.md     # 后端资源创建文档
+│   └── expense-ledger.md      # 平台花销、分摊、结算与兼容规则
 ├── .github/
 │   ├── hooks/                 # 文档同步检查 hook
 │   └── skills/                # 自动化 skill
@@ -55,7 +56,9 @@ Travel/
 
 ---
 
-## 一、前端（GitHub Pages）
+## 一、手写云南页前端（`云南/` · GitHub Pages）
+
+> 本节描述旧版单行程手写页面。`app/` 多行程平台及其新版分摊账本见第五节和 [docs/expense-ledger.md](docs/expense-ledger.md)。
 
 ### 技术
 - 纯 **HTML + CSS + 原生 JavaScript（ES Modules）**，无框架、无构建步骤。
@@ -104,7 +107,7 @@ Travel/
 
 ---
 
-## 二、后端（Azure Functions + Storage）
+## 二、手写云南页后端（Azure Functions + Storage）
 
 ### 技术
 - **Azure Functions**（Node 22，v4 编程模型，Linux 消费计划）。
@@ -112,6 +115,8 @@ Travel/
 - 通过 **CORS** 只允许 GitHub Pages 域名调用。
 
 ### API
+以下 `/state`、`/upload`、`/expenses` 接口主要服务于 `云南/` 手写页面；`app/` 平台接口见第五节。
+
 | 方法 | 路由 | 作用 | 请求体 | 返回 |
 |------|------|------|--------|------|
 | GET | `/api/state` | 读取全部清单 | — | `{ items: { [id]: {done,who,note,img} } }` |
@@ -192,7 +197,7 @@ az resource list -g rg-yn-travel -o table
 | 云南行程导入平台 | 手写云南数据已转成平台 Schema，存为 trip **`yunnan2026`** | — |
 | 预定清单附件 | 平台清单补齐与云南页一致的**📎 附件**（完成人 / 文字说明 / 图片凭证，图片经 `/api/upload` 存 Blob） | `app/js/render.js`、`app/js/trip.js`、`app/js/api.js` |
 | 🎨 多模板风格 | resort/ocean/sunset/minimal 四套，右上角切换，云端持久化 | `app/js/trip.js` |
-| 💰 花销时间轴看板 | 动态人员、纵轴时间、悬停累计 | `app/js/trip.js` |
+| 💰 花销分摊账本 | 动态同行人；付款人与承担人分离；平均/自定义分摊；实际付款、实际承担、净余额和建议结算；时间线与可排序表格；旧记录兼容 | `app/js/expense-model.js`、`app/js/trip.js`、[完整说明](docs/expense-ledger.md) |
 | 🖼️ 照片墙 MVP | 新增照片墙 Tab；支持全局上传、按 destination / timeline item 自动关联、照片墙展示、Lightbox 查看与编辑 caption/destination/关联对象；右侧桌面端 Three.js/CSS3D 旋转照片球与筛选联动 | `app/js/photos.js`、`app/js/trip.js`、`app/js/render.js`、`app/css/styles.css` |
 | ⭐ 收藏路由 | 干净 URL `/app/trip-collections?trip=<ID>`（App Service 上目录方式实现） | `app/trip-collections/index.html` |
 
@@ -226,8 +231,15 @@ az resource list -g rg-yn-travel -o table
 ### 平台后端（多租户，与云南单租户隔离）
 - `api/src/functions/trips.js`：`POST /api/trips/generate`、`GET /api/trips/{id}`、`PUT /api/trips/{id}/save`（upsert，可指定 id）、`POST /api/trips/{id}/chat`、`POST /api/trips/{id}/tools/execute`。
 - `api/src/functions/upload.js`：照片墙、清单附件等图片上传入口，当前上传到 Blob 容器 `proofs`。
-- 存储：Table `trips`（`PartitionKey="trip"`，`RowKey=tripId`，整份 Schema 存 `data` 字段）；Table `ratelimit` 限流。
+- 存储：Table `trips`（`PartitionKey="trip"`，`RowKey=tripId`，整份 Schema 存 `data` 字段，包含平台的 `people[]` 与 `expenses[]`）；Table `ratelimit` 限流。平台花销不写入旧版独立 `expenses` Table。
 - Azure OpenAI（生成 + 聊天）：配置在 Function App 应用设置 `AOAI_ENDPOINT / AOAI_DEPLOYMENT / AOAI_API_KEY / AOAI_API_VERSION`（密钥不落前端）。
+
+### 平台花销账本
+
+- 数据结构、分摊规则、结算算法、旧数据兼容、AI 写入确认、本地隔离测试与测试覆盖详见 [docs/expense-ledger.md](docs/expense-ledger.md)。
+- 新花销默认选择全部同行人并平均分摊；用户也可以只选择部分参与人或为每人填写自定义金额。
+- 旧记录只有 `personId` 时，付款人同时视为唯一承担人，避免升级后悄然改变历史账目。
+- 金额按整数分计算；自定义分配合计必须严格等于订单总额。
 
 ### 前端托管（两处）
 - **GitHub Pages**：<https://cfonheart.github.io/Travel/>

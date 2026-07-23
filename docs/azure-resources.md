@@ -14,17 +14,24 @@
 | 1 | 资源组 | `Microsoft.Resources/resourceGroups` | `rg-yn-travel` | 位置 `eastasia` | 统一管理所有资源 |
 | 2 | 存储账户 | `Microsoft.Storage/storageAccounts` | `stynue8266` | `Standard_LRS`，启用公开 Blob 访问 | ① Functions 运行时存储 ② Table 存清单 ③ Blob 存图片 |
 | 3 | Table | `.../storageAccounts/tableServices/tables` | `checklist` | — | 清单状态（首次调用自动创建） |
-| 4 | Table | `.../storageAccounts/tableServices/tables` | `expenses` | — | 花销记录（首次调用自动创建） |
+| 4 | Table | `.../storageAccounts/tableServices/tables` | `expenses` | — | `云南/` 手写页面的旧版独立花销记录（首次调用自动创建） |
 | 5 | Blob 容器 | `.../storageAccounts/blobServices/containers` | `proofs` | 公开只读（blob） | 图片凭证（首次上传自动创建） |
 | 6 | 函数应用 | `Microsoft.Web/sites` (kind `functionapp,linux`) | `func-yntravel-ue8266` | Linux · **消费计划** · Node 22 · Functions v4 | 承载 API |
 | 7 | 消费计划 | `Microsoft.Web/serverfarms` | `EastAsiaLinuxDynamicPlan` | Dynamic (Y1) | Functions 的按量计费宿主 |
-| 8 | Table | `.../storageAccounts/tableServices/tables` | `trips` | — | 多租户「行程生成平台」的整份行程 Schema（首次调用自动创建） |
+| 8 | Table | `.../storageAccounts/tableServices/tables` | `trips` | — | 多租户「行程生成平台」的整份行程 Schema，包含平台 `people[]` / `expenses[]` 分摊账本（首次调用自动创建） |
 | 9 | Table | `.../storageAccounts/tableServices/tables` | `ratelimit` | — | 生成/聊天接口的限流计数（首次调用自动创建） |
 | 10 | App Service 计划 | `Microsoft.Web/serverfarms` | `asp-yntravel-web` | **Linux · B1（付费）** | 托管前端静态站的计算宿主 |
 | 11 | Web App | `Microsoft.Web/sites` (kind `app,linux`) | `yntravel-site-ue8266` | PHP 8.2（nginx）· 仅 HTTPS | **前端静态托管**（国内可访问，绕开 github.io 被重置） |
 
 > `ue8266` 是创建时生成的 6 位随机后缀，保证存储账户名与函数应用名全局唯一。
 > 在新环境部署会生成新的后缀（见 skill）。
+
+### 两套花销存储不要混用
+
+- `云南/` 手写页面调用 `/api/expenses`，使用独立的 `expenses` Table，记录结构为 `person/amount/note/time`。
+- `app/` 多行程平台把花销存入 `trips.data` 中的 `trip.expenses[]`，通过 `/api/trips/{id}` 读取并通过 `/save` 或确认后的 `/tools/execute` 保存。
+- 平台记录支持 `payerId`、`participantIds`、`splitMode` 和 `allocations`，不要用旧版 `/api/expenses` 对其读写。
+- 平台分摊账本的数据结构和兼容规则见 [expense-ledger.md](expense-ledger.md)。
 
 ---
 
