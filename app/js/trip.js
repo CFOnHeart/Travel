@@ -1,13 +1,13 @@
 /** 行程页主逻辑：加载、渲染、Tab 切换、勾选保存、分享、编辑。 */
-import { classifyTripExpenses, getTrip, saveTrip, uploadImage } from './api.js';
-import { APP_ENV, RECENT_KEY } from './config.js';
+import { classifyTripExpenses, getTrip, saveTrip, uploadImage } from './api.js?v=expense-insights-20260724';
+import { APP_ENV, RECENT_KEY } from './config.js?v=expense-insights-20260724';
 import {
   renderHero, renderSections, renderChecklistPanel, renderPackingPanel, esc
 } from './render.js?v=figma-travel-20260715';
 import { initEditor, setEditorData } from './editor.js';
 import { initChat } from './chat.js';
 import { initPhotos, renderPhotosPanel } from './photos.js';
-import { expenseCategorySummary, expenseLedger, normalizeExpense, personCategorySummaries, personSpendingSummary, settlementTransfers, spreadTimelinePositions } from './expense-model.js';
+import { expenseCategorySummary, expenseLedger, normalizeExpense, personCategorySummaries, personSpendingSummary, settlementTransfers, spreadTimelinePositions } from './expense-model.js?v=expense-insights-20260724';
 
 const PANELS = ['trip', 'booking', 'packing', 'expense', 'photos'];
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }

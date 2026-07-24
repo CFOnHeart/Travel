@@ -1,5 +1,5 @@
 /** 后端调用封装：生成 / 读取 / 保存行程。 */
-import { API_BASE } from './config.js';
+import { API_BASE } from './config.js?v=expense-insights-20260724';
 import { CHAT_STRUCTURE_GUARD, normalizeTripStructure } from './structure.js';
 
 export async function generateTrip(text) {
