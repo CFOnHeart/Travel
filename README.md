@@ -49,6 +49,9 @@ Travel/
 # 前端本地预览（任意静态服务器）
 npx serve app
 
+# 改动了 Tailwind 工具类后，重新生成 app/css/tailwind.css（编译产物已提交到 git，部署不需要构建步骤）
+cd app; npm run build:css
+
 # 后端发布
 cd api; func azure functionapp publish func-yntravel-ue8266
 
@@ -95,6 +98,9 @@ az resource list -g rg-yn-travel -o table
 | 💰 花销分摊账本 | 动态同行人；付款人与承担人分离；平均/自定义分摊；实际付款、实际承担、净余额和建议结算；时间线与可排序表格；旧记录兼容 | `app/js/expense-model.js`、`app/js/trip.js`、[完整说明](docs/expense-ledger.md) |
 | 🖼️ 照片墙 MVP | 新增照片墙 Tab；支持全局上传、按 destination / timeline item 自动关联、照片墙展示、Lightbox 查看与编辑 caption/destination/关联对象；右侧桌面端 Three.js/CSS3D 旋转照片球与筛选联动 | `app/js/photos.js`、`app/js/trip.js`、`app/js/render.js`、`app/css/styles.css` |
 | ⭐ 收藏路由 | 干净 URL `/app/trip-collections?trip=<ID>`（App Service 上目录方式实现） | `app/trip-collections/index.html` |
+| 🧰 Tailwind CSS（渐进式） | 保留原有手写 `styles.css` 不动，新增 `tailwind.css` 作为工具类补充层（`preflight` 已关闭，不重置现有样式），用于新写的响应式/移动端布局，逐步减少手写媒体查询 | `app/tailwind.config.js`、`app/css/tailwind-input.css` → 编译产物 `app/css/tailwind.css` |
+
+> Tailwind 使用说明：`app/` 下 `npm run build:css` 编译（`--minify`），`npm run watch:css` 本地开发监听。编译产物 `tailwind.css` **需要提交到 git**——部署流程仍是纯静态文件拷贝，没有构建步骤，所以任何 HTML/JS 里新增的 Tailwind class 必须在提交前本地跑一次 `build:css`。`tailwind.config.js` 里 `content` 扫描 `app/*.html`、`app/trip-collections/*.html`、`app/js/**/*.js`。
 
 ### 照片墙设计与数据
 - 照片元数据暂存在 trip JSON 的 `photos` 数组里，图片文件复用现有 `/api/upload` 上传到 Blob 容器 `proofs`。当前 MVP 不单独建照片 Table。

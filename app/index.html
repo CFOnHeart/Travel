@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>行程生成 · 把你的行程变成一页精美记录</title>
 <link rel="stylesheet" href="css/styles.css">
+<!-- Tailwind 工具类（编译产物，改动后需在 app/ 目录运行 npm run build:css 重新生成） -->
+<link rel="stylesheet" href="css/tailwind.css">
 </head>
 <body>
   <div class="home-wrap">
@@ -17,10 +19,10 @@
     <div class="gen-card">
       <label for="tripText">✍️ 描述你的行程</label>
       <textarea id="tripText" placeholder="例如：&#10;1. 去程航班 7/17 周五 19:15 上海浦东出发 KY3122，含行李托运，约 ¥800/人&#10;2. 住宿 7/17-7/21 四晚 温德姆至尊酒店 豪华大床房，¥475/晚，人均约 950&#10;3. 7/21 早 7:55 DR5051 飞丽江，含机建燃油 ¥340/人（行李托运仅 10kg）&#10;4. 机场租车 小鹏G7 ¥250/天 租四天，含保险，人均约 450&#10;..."></textarea>
-      <div class="gen-actions">
-        <button class="gen-btn" id="genBtn" type="button">✨ 生成行程页</button>
-        <button class="gen-example" id="exampleBtn" type="button">填入示例</button>
-        <span class="gen-hint">仅支持中文 · 生成后可手动编辑</span>
+      <div class="gen-actions flex flex-wrap items-center gap-3">
+        <button class="gen-btn w-full sm:w-auto" id="genBtn" type="button">✨ 生成行程页</button>
+        <button class="gen-example w-full sm:w-auto" id="exampleBtn" type="button">填入示例</button>
+        <span class="gen-hint basis-full sm:basis-auto">仅支持中文 · 生成后可手动编辑</span>
       </div>
       <div class="gen-status" id="genStatus"></div>
     </div>

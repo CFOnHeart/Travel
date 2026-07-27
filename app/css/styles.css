@@ -2714,3 +2714,77 @@ body::after { content: none; }
     animation: chat-wait-spin 1.8s steps(8, end) infinite !important;
   }
 }
+
+/* ============================================================
+   移动端紧凑排版（在文件末尾，确保覆盖以上所有主题层）
+   目标：整体字号/间距按比例缩小，让手机屏幕一屏能看到更多内容，
+   同时避免看起来拥挤；文字类输入框强制 16px，防止 iOS 聚焦自动放大。
+   ============================================================ */
+@media (max-width: 640px) {
+  html { font-size: 15px; }
+  body { line-height: 1.55; }
+
+  .wrap,
+  .home-wrap { padding-left: 14px; padding-right: 14px; }
+
+  .card,
+  .destination-card,
+  .todo-group,
+  .gen-card { padding: 16px; }
+
+  .hero { min-height: 260px; padding-top: 44px; padding-bottom: 64px; }
+  .hero h1 { font-size: 1.9rem; line-height: 1.15; }
+  .hero p { font-size: .92rem; }
+
+  /* 5 个主 Tab 在窄屏下改为单行横向滑动，避免换行占用大量竖向空间 */
+  .main-tabs {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .main-tabs::-webkit-scrollbar { display: none; }
+  .main-tab {
+    flex: 0 0 auto; white-space: nowrap;
+    padding: 10px 16px; font-size: .92rem;
+  }
+
+  .section-title { font-size: 1.15rem; }
+  .checklist-head h2 { font-size: 1.28rem; }
+  .trip-toolbar {
+    gap: 8px; flex-wrap: nowrap; justify-content: flex-start;
+    overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  }
+  .trip-toolbar::-webkit-scrollbar { display: none; }
+  .tool-btn { flex: 0 0 auto; white-space: nowrap; padding: 7px 13px; font-size: .82rem; }
+
+  /* 保证可点击区域不因字号缩小而低于可用的触控高度 */
+  .main-tab,
+  .tool-btn,
+  .gen-btn,
+  .chat-send { min-height: 40px; }
+
+  /* 文字输入框固定 16px，防止 iOS Safari 聚焦时自动放大页面 */
+  .modal input[type=text],
+  .modal input[type=number],
+  .modal input[type=datetime-local],
+  .modal textarea,
+  .gen-card textarea,
+  .ed-input,
+  .ed-text,
+  .chat-inputbar textarea,
+  .tool-fields input,
+  .tool-fields select {
+    font-size: 16px;
+  }
+
+  /* 聊天面板贴底部安全区域，避免被 iPhone Home 指示条遮挡 */
+  .chat-inputbar { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+}
+
+@media (max-width: 400px) {
+  html { font-size: 14px; }
+  .hero h1 { font-size: 1.65rem; }
+  .main-tab { padding: 9px 13px; font-size: .88rem; }
+}

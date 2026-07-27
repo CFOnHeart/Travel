@@ -49,13 +49,20 @@ Pop-Location
 All cases under `api/test/`, including the readable 小白熊行程助手 cases in `api/test/chat-cases/`, must pass. These cases verify tool-based add/update/delete execution, read-only trip-context answers, ordinary conversation, and accidental-write prevention. Never commit, push, or deploy when this command fails. Fix the regression and rerun the complete suite first. The bundled deployment script enforces this gate automatically.
 
 ### A. Frontend (GitHub Pages)
-1. Commit and push:
+1. If any Tailwind utility classes changed in `app/*.html`, `app/trip-collections/*.html`, or `app/js/**/*.js`, rebuild the compiled stylesheet first (it's a committed static artifact, not generated at deploy time):
+   ```powershell
+   Push-Location app
+   npm run build:css
+   Pop-Location
+   git status --short app/css/tailwind.css
+   ```
+2. Commit and push:
    ```powershell
    git add -A
    git commit -m "Update travel app"
    git push origin main
    ```
-2. GitHub Pages rebuilds in ~1 min. Live URL: `https://<user>.github.io/<repo>/`.
+3. GitHub Pages rebuilds in ~1 min. Live URL: `https://<user>.github.io/<repo>/`.
    Confirm by fetching the page and checking it returns HTTP 200.
 
 ### B. Backend (Azure Functions)
