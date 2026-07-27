@@ -3,10 +3,11 @@ import { classifyTripExpenses, getTrip, saveTrip, uploadImage } from './api.js?v
 import { APP_ENV, RECENT_KEY } from './config.js?v=expense-insights-20260724';
 import {
   renderHero, renderSections, renderChecklistPanel, renderPackingPanel, esc
-} from './render.js?v=figma-travel-20260715';
+} from './render.js?v=ai-notes-20260727';
 import { initEditor, setEditorData } from './editor.js';
-import { initChat } from './chat.js';
+import { initChat } from './chat.js?v=chat-loading-20260727';
 import { initPhotos, renderPhotosPanel } from './photos.js';
+import { resolveGenerationNotesMode } from './generation-notes-state.js';
 import { expenseCategorySummary, expenseLedger, normalizeExpense, personCategorySummaries, personSpendingSummary, settlementTransfers, spreadTimelinePositions } from './expense-model.js?v=expense-insights-20260724';
 
 const PANELS = ['trip', 'booking', 'packing', 'expense', 'photos'];
@@ -27,6 +28,54 @@ let pendingExpenseScrollY = null;
 let expenseModalScrollY = null;
 let expenseAnalysisLoading = false;
 let expenseAnalysisError = '';
+let generationNotesState = null;
+
+function generationNotesStorageKey() {
+  return `travel:generation-notes:${tripId}`;
+}
+
+function readGenerationNotesState() {
+  try { return JSON.parse(localStorage.getItem(generationNotesStorageKey()) || 'null'); }
+  catch { return null; }
+}
+
+function saveGenerationNotesMode(mode) {
+  generationNotesState = { ...generationNotesState, mode };
+  try { localStorage.setItem(generationNotesStorageKey(), JSON.stringify(generationNotesState)); }
+  catch { /* storage unavailable */ }
+  applyGenerationNotesMode();
+}
+
+function scrollToGenerationNotes() {
+  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  $('[data-generation-notes]')?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'nearest' });
+}
+
+function applyGenerationNotesMode() {
+  const notes = trip && trip.meta && trip.meta.generationNotes;
+  generationNotesState = resolveGenerationNotesMode(generationNotesState || readGenerationNotesState(), notes);
+  const section = $('[data-generation-notes]');
+  const toolbarButton = $('#generationNotesBtn');
+  if (!notes || !section) {
+    if (toolbarButton) toolbarButton.hidden = true;
+    return;
+  }
+  const dismissed = generationNotesState.mode === 'dismissed';
+  section.hidden = dismissed;
+  section.classList.toggle('is-collapsed', generationNotesState.mode === 'collapsed');
+  toolbarButton.hidden = !dismissed;
+}
+
+function wireGenerationNotes() {
+  const notes = trip && trip.meta && trip.meta.generationNotes;
+  generationNotesState = resolveGenerationNotesMode(readGenerationNotesState(), notes);
+  applyGenerationNotesMode();
+  $$('[data-generation-action]').forEach(button => button.addEventListener('click', () => {
+    const action = button.dataset.generationAction;
+    saveGenerationNotesMode(action === 'dismiss' ? 'dismissed' : action === 'collapse' ? 'collapsed' : 'expanded');
+    if (action === 'expand') scrollToGenerationNotes();
+  }));
+}
 
 const EXPENSE_CATEGORY_META = {
   '餐饮': { color: '#ff385c', icon: '🍜' },
@@ -53,6 +102,7 @@ function renderAll() {
   const title = (trip.meta && trip.meta.title) || '我的行程';
   document.title = APP_ENV === 'local' ? `[Local] ${title}` : title;
   wireChecklist();
+  wireGenerationNotes();
 }
 
 function renderExpense() {
@@ -851,6 +901,10 @@ async function init() {
   document.addEventListener('keydown', event => { if (event.key === 'Escape') closeExpenseDetailDrawer(); });
   initTabs();
   initShare();
+  $('#generationNotesBtn').addEventListener('click', () => {
+    saveGenerationNotesMode('expanded');
+    requestAnimationFrame(scrollToGenerationNotes);
+  });
   initTemplateSwitch();
   initEditor(onEditorSave);
   initExpenseModal();

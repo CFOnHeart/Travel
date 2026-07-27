@@ -1,5 +1,7 @@
 /** 小白熊行程助手：右侧聊天框，通过对话增删改查行程/清单/物品/花销。 */
 import { chatTrip, executeTripTools, saveTrip } from './api.js';
+import { canUndoSnapshot, isUndoRequest } from './chat-intent.js';
+export { canUndoSnapshot, isUndoRequest } from './chat-intent.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -20,6 +22,7 @@ export function initChat(ctx) {
   const fab = $('#chatFab'), panel = $('#chatPanel'), mask = $('#chatMask');
   const msgs = $('#chatMsgs'), input = $('#chatText'), sendBtn = $('#chatSend');
   const history = [];            // 发给后端的对话历史 [{role, content}]
+  const undoStack = [];
   let busy = false;
   let greeted = false;
 
@@ -63,7 +66,11 @@ export function initChat(ctx) {
   function showThinking() {
     const wrap = document.createElement('div');
     wrap.className = 'chat-msg bot';
-    wrap.innerHTML = `<div class="bubble chat-thinking"><span class="spin"></span>正在思考…</div>`;
+    wrap.innerHTML = `
+      <div class="bubble chat-thinking" role="status" aria-live="polite" aria-busy="true">
+        <span class="chat-wait-spinner" aria-hidden="true"></span>
+        <span>正在等待 AI 回复…</span>
+      </div>`;
     msgs.appendChild(wrap);
     msgs.scrollTop = msgs.scrollHeight;
     return wrap;
@@ -241,6 +248,11 @@ export function initChat(ctx) {
     }
   }
 
+  function rememberUndo(before, after) {
+    undoStack.push({ before: deepClone(before), after: deepClone(after) });
+    if (undoStack.length > 10) undoStack.shift();
+  }
+
   async function applyLegacyReplace(call) {
     const nextTrip = call && call.args && call.args.updatedTrip;
     const focus = call && call.args && call.args.focus;
@@ -261,6 +273,36 @@ export function initChat(ctx) {
 
     const thinking = showThinking();
     try {
+      if (isUndoRequest(text)) {
+        thinking.remove();
+        if (!undoStack.length) {
+          applyToolResult('当前聊天中还没有可以撤销的行程修改。', null, null);
+          return;
+        }
+        const undoEntry = undoStack[undoStack.length - 1];
+        if (!canUndoSnapshot(ctx.getTrip(), undoEntry)) {
+          undoStack.pop();
+          applyToolResult('行程在上一轮聊天修改后又发生了其他变化，为避免覆盖这些新内容，本次不能自动撤销。', null, null);
+          return;
+        }
+        const confirmed = await confirmTools([{
+          action: 'trip.replace',
+          title: '撤销上一轮修改',
+          message: '将行程恢复到上一轮修改前的状态，请确认后执行。',
+          args: { updatedTrip: deepClone(undoEntry.before), focus: 'trip' }
+        }]);
+        if (!confirmed || !confirmed.length) {
+          addBubble('bot', '已取消撤销。');
+          return;
+        }
+        const executing = showThinking();
+        const result = await applyLegacyReplace(confirmed[0]);
+        executing.remove();
+        undoStack.pop();
+        applyToolResult(result.reply, result.updatedTrip, result.focus);
+        return;
+      }
+
       let { reply, updatedTrip, focus, toolCalls } = await chatTrip(ctx.tripId, ctx.getTrip(), history);
       thinking.remove();
       if (updatedTrip && (!Array.isArray(toolCalls) || !toolCalls.length)) {
@@ -287,10 +329,12 @@ export function initChat(ctx) {
           return;
         }
         const executing = showThinking();
+        const changeSnapshot = deepClone(ctx.getTrip());
         const result = confirmed.length === 1 && confirmed[0].action === 'trip.replace'
           ? await applyLegacyReplace(confirmed[0])
           : await executeTripTools(ctx.tripId, ctx.getTrip(), confirmed);
         executing.remove();
+        if (result.updatedTrip) rememberUndo(changeSnapshot, result.updatedTrip);
         applyToolResult(result.reply, result.updatedTrip, result.focus);
       }
     } catch (e) {

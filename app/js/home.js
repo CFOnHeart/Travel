@@ -44,7 +44,11 @@ async function onGenerate() {
   const text = $('#tripText').value.trim();
   const status = $('#genStatus');
   status.className = 'gen-status';
-  if (text.length < 10) { status.className = 'gen-status err'; status.textContent = '请先输入行程描述（至少 10 个字）。'; return; }
+  if (text.replace(/\s/g, '').length < 4) {
+    status.className = 'gen-status err';
+    status.textContent = '请补充旅行相关信息，例如目的地、时间或想体验的内容。';
+    return;
+  }
 
   $('#genBtn').disabled = true;
   $('#genOverlay').classList.add('open');

@@ -24,8 +24,18 @@ function cleanText(value) {
 function renderGenerationNotes(notes) {
   if (!notes || typeof notes !== 'object') return '';
   const decisions = Array.isArray(notes.decisions) ? notes.decisions.filter(Boolean) : [];
+  const groups = [
+    { key: 'corrections', label: '已主动修正', icon: '✓', className: 'correction' },
+    { key: 'assumptions', label: '采用的合理假设', icon: '≈', className: 'assumption' },
+    { key: 'missingInfo', label: '还可以继续补充', icon: '+', className: 'missing' },
+    { key: 'warnings', label: '需要你核对', icon: '!', className: 'warning' }
+  ].map(group => ({
+    ...group,
+    items: Array.isArray(notes[group.key]) ? notes[group.key].filter(Boolean) : []
+  })).filter(group => group.items.length);
+  const reviewCount = groups.reduce((sum, group) => sum + group.items.length, 0);
   return `
-    <section class="generation-notes${notes.needsReview ? ' needs-review' : ''}" aria-label="AI 行程整理说明">
+    <section class="generation-notes${notes.needsReview ? ' needs-review' : ''}" aria-label="AI 行程整理说明" data-generation-notes>
       <div class="generation-notes-icon" aria-hidden="true">✨</div>
       <div class="generation-notes-copy">
         <div class="generation-notes-head">
@@ -33,12 +43,29 @@ function renderGenerationNotes(notes) {
             <span class="generation-notes-kicker">AI 整理说明</span>
             <h2>${esc(notes.title || 'AI 已完成行程整理')}</h2>
           </div>
-          <span class="generation-notes-status">${notes.needsReview ? '建议核对' : '已整理'}</span>
+          <div class="generation-notes-actions">
+            <span class="generation-notes-status">${notes.needsReview ? '建议核对' : '已整理'}</span>
+            <button type="button" data-generation-action="collapse">收起</button>
+            <button type="button" data-generation-action="dismiss" title="仅在当前设备隐藏，不会删除行程内容">不再显示</button>
+          </div>
         </div>
         ${notes.summary ? `<p class="generation-notes-summary">${esc(notes.summary)}</p>` : ''}
         ${decisions.length ? `<ul>${decisions.map(item => `<li>${esc(item)}</li>`).join('')}</ul>` : ''}
+        ${groups.length ? `<div class="generation-notes-groups">${groups.map(group => `
+          <div class="generation-note-group ${group.className}">
+            <h3><span aria-hidden="true">${group.icon}</span>${group.label}</h3>
+            <ul>${group.items.map(item => `<li>${esc(typeof item === 'string' ? item : item.detail || item.message || item.title || '')}</li>`).join('')}</ul>
+          </div>`).join('')}</div>` : ''}
         ${notes.reviewHint ? `<p class="generation-notes-review"><b>请留意：</b>${esc(notes.reviewHint)}</p>` : ''}
         ${notes.chatHint ? `<p class="generation-notes-chat">💬 ${esc(notes.chatHint)}</p>` : ''}
+      </div>
+      <div class="generation-notes-compact">
+        <div>
+          <b>${notes.needsReview ? 'AI 有内容建议你核对' : 'AI 行程说明已收起'}</b>
+          <span>${reviewCount ? `${reviewCount} 项整理信息` : '可随时重新查看'}</span>
+        </div>
+        <button type="button" data-generation-action="expand">查看</button>
+        <button type="button" data-generation-action="dismiss" aria-label="不再显示 AI 行程说明">×</button>
       </div>
     </section>`;
 }
