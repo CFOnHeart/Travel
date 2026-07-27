@@ -18,7 +18,7 @@ separate resource group and Storage account; local API/frontend processes remain
 ## Modes
 | Mode | What it does |
 |------|--------------|
-| `new` | Generates a unique 6-char suffix, creates RG + Storage + Function App, sets CORS + app settings, deploys code, and **updates `API_BASE` in `云南/js/config.js`**. |
+| `new` | Generates a unique 6-char suffix, creates RG + Storage + Function App, sets CORS + app settings, deploys code, and **updates `API_BASE` in `app/js/config.js`**. |
 | `update` | Uses the existing Function App (from `API_BASE`), re-applies CORS + app settings, and redeploys code. Does not recreate resources. |
 
 With `-Environment local`, either mode is idempotent and creates/verifies only RG + Storage + Tables + Blob. It never creates a Function App, App Service, or plan.
@@ -38,7 +38,7 @@ Ask the user which mode if unclear. Default region: `eastasia`.
 - Runtime: **Node 22**, Functions **v4**, **Linux consumption** plan.
 - Storage: `Standard_LRS`, `--allow-blob-public-access true`.
 - App setting: `AzureWebJobsFeatureFlags=EnableWorkerIndexing`.
-- Tables `checklist` and `expenses`, and Blob container `proofs`, are **auto-created by the code** on first use — no manual step.
+- Table `trips` (platform trip data) and Blob container `proofs` are **auto-created by the code** on first use — no manual step.
 
 ## Procedure
 
@@ -64,8 +64,8 @@ See [provision.ps1](./scripts/provision.ps1).
 4. Create Function App `func-yntravel-<suffix>` (Linux, consumption, Node 22, v4).
 5. Set `AzureWebJobsFeatureFlags` and add CORS origins.
 6. `func azure functionapp publish` from `api/`.
-7. Rewrite `API_BASE` in `云南/js/config.js`.
-8. Smoke-test `GET /api/state`.
+7. Rewrite `API_BASE` in `app/js/config.js`.
+8. Smoke-test `GET /api/trips/yunnan2026`.
 
 ### What the script does (update mode)
 1. Read Function App name from `API_BASE`.
@@ -75,7 +75,7 @@ See [provision.ps1](./scripts/provision.ps1).
 ### What the script does (local environment)
 1. Reads `config/environments/local.json` and selects its subscription.
 2. Creates/verifies the `-local` resource group and dedicated Storage account.
-3. Creates `trips`, `ratelimit`, `checklist`, `expenses`, and `expenseAnalysis` Tables plus `proofs` Blob container.
+3. Creates `trips`, `ratelimit`, and `expenseAnalysis` Tables plus `proofs` Blob container.
 4. Does not provision or publish any web compute resource.
 
 ## After running (new mode)
@@ -87,13 +87,13 @@ The frontend `API_BASE` changed, so **deploy the frontend** to publish it:
 
 ## Validation Checklist
 - [ ] `az resource list -g <rg> -o table` shows storage account + function app + plan.
-- [ ] `GET https://<func>.azurewebsites.net/api/state` returns `{ items: {...} }`.
+- [ ] `GET https://<func>.azurewebsites.net/api/trips/yunnan2026` returns the trip JSON.
 - [ ] CORS includes the Pages origin: `az functionapp cors show -n <func> -g <rg>`.
-- [ ] (new mode) `API_BASE` in the HTML points to the new function app.
+- [ ] (new mode) `API_BASE` in `app/js/config.js` points to the new function app.
 
 ## Pitfalls
 - **Node version**: the CLI rejects EOL runtimes; the script pins Node 22. If it errors, bump to the newest LTS the CLI accepts.
 - **Name uniqueness**: storage (≤24 lowercase alnum) and function app names must be globally unique — the random suffix handles this.
 - **Public blob access**: required so image URLs work; the script sets it at creation.
-- **First `/api/state` call**: cold start can take up to ~1 min; use a generous timeout.
+- **First `/api/trips/yunnan2026` call**: cold start can take up to ~1 min; use a generous timeout.
 - **Don't** forget to redeploy the frontend after `new` mode (API_BASE changed).

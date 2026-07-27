@@ -1,6 +1,6 @@
 # 平台花销与分摊账本
 
-本文说明 `app/` 多行程平台中的花销功能。它与 `云南/` 手写页面使用的旧版 `/api/expenses` 独立：平台花销随整份 trip Schema 存入 `trips` Table，不写入独立的 `expenses` Table。
+本文说明 `app/` 多行程平台中的花销功能。平台花销随整份 trip Schema 存入 `trips` Table（不使用独立的 `expenses` Table）。
 
 ## 功能概览
 
@@ -134,7 +134,7 @@
 | `POST` | `/api/trips/{id}/chat` | 生成只读回答或待确认工具 |
 | `POST` | `/api/trips/{id}/tools/execute` | 确认后执行花销等写工具 |
 
-不要使用旧版 `/api/expenses` 修改平台花销；该接口服务于 `云南/` 手写页面，数据存放位置和字段都不同。
+平台花销存入整份 trip Schema 的 `trips` Table（不使用独立的 `expenses` Table），历史遗留的 `/api/expenses` 接口及其对应的静态页面已下线删除。
 
 ## 本地隔离测试
 

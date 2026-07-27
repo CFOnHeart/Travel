@@ -44,8 +44,7 @@ const PROOFS_CONTAINER = 'proofs';
 function isWritableLocalTrip(tripId) { return Boolean(tripId); }
 function tripClient() { return TableClient.fromConnectionString(localStorageConnection, TRIPS_TABLE); }
 function analysisClient() { return TableClient.fromConnectionString(localStorageConnection, ANALYSIS_TABLE); }
-function tableClient(tableName) { return TableClient.fromConnectionString(localStorageConnection, tableName); }
-async function ensureTable(client) { try { await client.createTable(); } catch { /* already exists */ } }
+function ensureTable(client) { try { return client.createTable(); } catch { /* already exists */ } }
 
 function tripForStorage(trip) {
   const stored = {
@@ -224,44 +223,6 @@ const apiServer = http.createServer(async (req, res) => {
       return json(res, 200, { url: blob.url, bytes: buffer.length, localBackend: true });
     }
 
-    if (url.pathname === '/api/state') {
-      const client = tableClient('checklist'); await ensureTable(client);
-      if (req.method === 'GET') {
-        const items = {};
-        for await (const entity of client.listEntities({ queryOptions: { filter: "PartitionKey eq 'yn'" } })) items[entity.rowKey] = { done: Boolean(entity.done), who: entity.who || '', note: entity.note || '', img: entity.img || '' };
-        return json(res, 200, { items, localBackend: true });
-      }
-      if (req.method === 'POST') {
-        const body = await readJson(req);
-        if (!body.id) return json(res, 400, { error: 'missing id' });
-        await client.upsertEntity({ partitionKey: 'yn', rowKey: String(body.id), done: Boolean(body.done), who: String(body.who || '').slice(0, 200), note: String(body.note || '').slice(0, 2000), img: String(body.img || '').slice(0, 500) }, 'Replace');
-        return json(res, 200, { ok: true, localBackend: true });
-      }
-    }
-
-    if (url.pathname === '/api/expenses') {
-      const client = tableClient('expenses'); await ensureTable(client);
-      if (req.method === 'GET') {
-        const items = [];
-        for await (const entity of client.listEntities({ queryOptions: { filter: "PartitionKey eq 'yn'" } })) items.push({ id: entity.rowKey, person: entity.person || '', amount: Number(entity.amount) || 0, note: entity.note || '', time: entity.time || '' });
-        return json(res, 200, { items, localBackend: true });
-      }
-      if (req.method === 'POST') {
-        const body = await readJson(req);
-        const amount = Number(body.amount);
-        if (!body.person || !Number.isFinite(amount)) return json(res, 400, { error: 'bad expense' });
-        const id = body.id ? String(body.id) : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
-        await client.upsertEntity({ partitionKey: 'yn', rowKey: id, person: String(body.person), amount, note: String(body.note || '').slice(0, 300), time: String(body.time || new Date().toISOString()).slice(0, 40) }, 'Replace');
-        return json(res, 200, { id, localBackend: true });
-      }
-    }
-
-    const legacyExpenseDelete = url.pathname.match(/^\/api\/expenses\/([^/]+)$/);
-    if (legacyExpenseDelete && ['DELETE', 'POST'].includes(req.method)) {
-      const client = tableClient('expenses'); await ensureTable(client);
-      await client.deleteEntity('yn', decodeURIComponent(legacyExpenseDelete[1])).catch(() => {});
-      return json(res, 200, { ok: true, localBackend: true });
-    }
     const match = url.pathname.match(/^\/api\/trips\/([^/]+)(?:\/(chat|save|tools\/execute|expenses\/classify))?$/);
     if (!match) return json(res, 404, { error: 'local dev proxy: route not found' });
     const tripId = decodeURIComponent(match[1]);

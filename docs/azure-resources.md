@@ -14,7 +14,7 @@
 
 Local 环境没有 Function App、App Service 或 Web 计算计划。`.tmp-local-dev-server.mjs` 通过被 Git 忽略的 `.storage_local` 直接访问 Local Storage；浏览器标题显示 `[Local]`。非秘密资源名保存在 `config/environments/prod.json` 和 `local.json`，任何本地写入都不得回退到 Production Storage。
 
-Local 与 Production Storage 均使用独立的 `expenseAnalysis` Table 保存 AI 消费分类；分类不嵌入 `trips.data`。Local Storage 另外初始化 `trips`、`ratelimit`、`checklist`、`expenses` Tables 和 `proofs` Blob 容器。Local `yunnan2026` 是从 Production 的隔离测试副本 `yunnan2026-localtest` 单向复制而来；源记录保留作回滚，不移动、不删除。
+Local 与 Production Storage 均使用独立的 `expenseAnalysis` Table 保存 AI 消费分类；分类不嵌入 `trips.data`。Local `yunnan2026` 是从 Production 的隔离测试副本 `yunnan2026-localtest` 单向复制而来；源记录保留作回滚，不移动、不删除。
 
 ---
 
@@ -23,25 +23,25 @@ Local 与 Production Storage 均使用独立的 `expenseAnalysis` Table 保存 A
 | # | 资源 | 类型 (ARM) | 名称（当前环境） | SKU / 配置 | 作用 |
 |---|------|-----------|-----------------|-----------|------|
 | 1 | 资源组 | `Microsoft.Resources/resourceGroups` | `rg-yn-travel` | 位置 `eastasia` | 统一管理所有资源 |
-| 2 | 存储账户 | `Microsoft.Storage/storageAccounts` | `stynue8266` | `Standard_LRS`，启用公开 Blob 访问 | ① Functions 运行时存储 ② Table 存清单 ③ Blob 存图片 |
-| 3 | Table | `.../storageAccounts/tableServices/tables` | `checklist` | — | 清单状态（首次调用自动创建） |
-| 4 | Table | `.../storageAccounts/tableServices/tables` | `expenses` | — | `云南/` 手写页面的旧版独立花销记录（首次调用自动创建） |
-| 5 | Blob 容器 | `.../storageAccounts/blobServices/containers` | `proofs` | 公开只读（blob） | 图片凭证（首次上传自动创建） |
-| 6 | 函数应用 | `Microsoft.Web/sites` (kind `functionapp,linux`) | `func-yntravel-ue8266` | Linux · **消费计划** · Node 22 · Functions v4 | 承载 API |
-| 7 | 消费计划 | `Microsoft.Web/serverfarms` | `EastAsiaLinuxDynamicPlan` | Dynamic (Y1) | Functions 的按量计费宿主 |
-| 8 | Table | `.../storageAccounts/tableServices/tables` | `trips` | — | 多租户「行程生成平台」的整份行程 Schema，包含平台 `people[]` / `expenses[]` 分摊账本（首次调用自动创建） |
-| 9 | Table | `.../storageAccounts/tableServices/tables` | `ratelimit` | — | 生成/聊天接口的限流计数（首次调用自动创建） |
-| 10 | App Service 计划 | `Microsoft.Web/serverfarms` | `asp-yntravel-web` | **Linux · B1（付费）** | 托管前端静态站的计算宿主 |
-| 11 | Web App | `Microsoft.Web/sites` (kind `app,linux`) | `yntravel-site-ue8266` | PHP 8.2（nginx）· 仅 HTTPS | **前端静态托管**（国内可访问，绕开 github.io 被重置） |
+| 2 | 存储账户 | `Microsoft.Storage/storageAccounts` | `stynue8266` | `Standard_LRS`，启用公开 Blob 访问 | ① Functions 运行时存储 ② Table 存行程数据 ③ Blob 存图片 |
+| 3 | Blob 容器 | `.../storageAccounts/blobServices/containers` | `proofs` | 公开只读（blob） | 图片凭证（首次上传自动创建） |
+| 4 | 函数应用 | `Microsoft.Web/sites` (kind `functionapp,linux`) | `func-yntravel-ue8266` | Linux · **消费计划** · Node 22 · Functions v4 | 承载 API |
+| 5 | 消费计划 | `Microsoft.Web/serverfarms` | `EastAsiaLinuxDynamicPlan` | Dynamic (Y1) | Functions 的按量计费宿主 |
+| 6 | Table | `.../storageAccounts/tableServices/tables` | `trips` | — | 多租户「行程生成平台」的整份行程 Schema，包含平台 `people[]` / `expenses[]` 分摊账本（首次调用自动创建） |
+| 7 | Table | `.../storageAccounts/tableServices/tables` | `ratelimit` | — | 生成/聊天接口的限流计数（首次调用自动创建） |
+| 8 | Table | `.../storageAccounts/tableServices/tables` | `expenseAnalysis` | — | AI 消费分类缓存（首次调用自动创建） |
+| 9 | App Service 计划 | `Microsoft.Web/serverfarms` | `asp-yntravel-web` | **Linux · B1（付费）** | 托管前端静态站的计算宿主 |
+| 10 | Web App | `Microsoft.Web/sites` (kind `app,linux`) | `yntravel-site-ue8266` | PHP 8.2（nginx）· 仅 HTTPS | **前端静态托管**（国内可访问，绕开 github.io 被重置） |
 
 > `ue8266` 是创建时生成的 6 位随机后缀，保证存储账户名与函数应用名全局唯一。
 > 在新环境部署会生成新的后缀（见 skill）。
 
-### 两套花销存储不要混用
+> ⚠️ **遗留资源**：Storage 账户里可能仍保留旧的 `checklist` / `expenses` 两张 Table —— 这是已删除的 `云南/` 手写静态页（及其专属 `state.js`/`expenses.js` Function）留下的数据。代码已不再读写它们，可以保留只读存档，也可以在确认无需回溯后手动删除（`az storage table delete --name checklist|expenses --connection-string ...`）。当前平台的花销与清单数据都存在 `trips` Table 里。
 
-- `云南/` 手写页面调用 `/api/expenses`，使用独立的 `expenses` Table，记录结构为 `person/amount/note/time`。
+### 平台花销存储
+
 - `app/` 多行程平台把花销存入 `trips.data` 中的 `trip.expenses[]`，通过 `/api/trips/{id}` 读取并通过 `/save` 或确认后的 `/tools/execute` 保存。
-- 平台记录支持 `payerId`、`participantIds`、`splitMode` 和 `allocations`，不要用旧版 `/api/expenses` 对其读写。
+- 平台记录支持 `payerId`、`participantIds`、`splitMode` 和 `allocations`。
 - 平台分摊账本的数据结构和兼容规则见 [expense-ledger.md](expense-ledger.md)。
 
 ---
@@ -73,12 +73,12 @@ az webapp update -n yntravel-site-ue8266 -g rg-yn-travel --https-only true
 az functionapp cors add -n func-yntravel-ue8266 -g rg-yn-travel `
   --allowed-origins "https://yntravel-site-ue8266.azurewebsites.net" "http://yntravel-site-ue8266.azurewebsites.net"
 
-# 部署前端（打包 index.html + app + 云南 → zip）。
+# 部署前端（打包 index.html + app → zip）。
 # 用 .NET ZipFile 而非 Compress-Archive，避免漏掉 .htaccess 等 dotfile。
 az webapp deploy -n yntravel-site-ue8266 -g rg-yn-travel --src-path .deploy-site.zip --type zip
 ```
 
-线上地址：<https://yntravel-site-ue8266.azurewebsites.net>（`/` 跳云南页；`/app/trip-collections/?trip=<ID>` 为收藏路由）。
+线上地址：<https://yntravel-site-ue8266.azurewebsites.net>（`/` 跳 `app/trip.html?trip=yunnan2026`；`/app/trip-collections/?trip=<ID>` 为收藏路由）。
 
 ### 存储账户
 - `--allow-blob-public-access true`：让 `proofs` 容器里的图片能通过 URL 直接访问。
@@ -134,11 +134,11 @@ func azure functionapp publish $FUNC
 创建/更换了函数应用名后，**前端里的 `API_BASE` 必须更新**：
 
 ```js
-// 云南/旅游计划.html
+// app/js/config.js
 const API_BASE = 'https://<新的 FUNC 名称>.azurewebsites.net/api';
 ```
 
-改完记得同步 `云南/index.html` 并推送。
+改完记得推送前端更新。
 
 ---
 

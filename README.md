@@ -1,10 +1,11 @@
 # Travel · 云南之旅
 
-个人旅行计划页面，采用 **静态前端（GitHub Pages）+ 轻量云端后端（Azure Functions + Storage）** 架构。
-清单支持多人实时协作：勾选完成、填写完成人、上传图片凭证或文字说明，数据同步到云端。
+个人旅行计划平台，采用 **数据驱动的静态前端（`app/`）+ 轻量云端后端（Azure Functions + Storage）** 架构。
+首页粘贴行程文本 → 自动生成一页可分享、可勾选的行程记录；清单/花销/照片支持多人实时协作，数据同步到云端。
 
-- 🌐 在线地址：https://cfonheart.github.io/Travel/
-- 📄 PDF 版：[云南/旅游计划.pdf](云南/旅游计划.pdf)
+> 历史遗留说明：仓库早期有一个纯手写的单行程静态页 `云南/`（连同专属后端 `state.js`/`expenses.js`），已于 2026-07-27 完全下线并删除，其数据已迁移为 `app/` 平台的 trip **`yunnan2026`**，仍可正常访问（见下方目录结构与部署方式）。
+
+- 🌐 在线地址：https://cfonheart.github.io/Travel/ （自动跳转到 `app/trip.html?trip=yunnan2026`）
 - ☁️ 资源清单与创建说明：[docs/azure-resources.md](docs/azure-resources.md)
 
 ---
@@ -13,36 +14,22 @@
 
 ```
 Travel/
-├── index.html                 # 根跳转页 → 云南/
-├── 云南/
-│   ├── index.html             # GitHub Pages 首页（旅游计划.html 的副本）
-│   ├── 旅游计划.html          # 页面标记（仅 HTML 结构，引用 css/ 与 js/）
-│   ├── 旅游计划.pdf           # 导出的 PDF 快照
-│   ├── css/
-│   │   └── styles.css         # 全部样式
-│   ├── js/                    # ES Modules（职责单一）
-│   │   ├── config.js          # API 地址、常量、参数
-│   │   ├── data.js            # GROUPS / PACKING 清单数据
-│   │   ├── utils.js           # DOM / 转义 / 格式化 / 图片压缩
-│   │   ├── api.js             # 云端 API 封装
-│   │   ├── store.js           # 本地状态 + localStorage
-│   │   ├── status.js          # 同步状态提示
-│   │   ├── lightbox.js        # 图片放大
-│   │   ├── attachmentModal.js # 附件弹窗
-│   │   ├── checklist.js       # 清单渲染 + 同步
-│   │   ├── expenses.js        # 花销看板 + 记账弹窗
-│   │   ├── tabs.js            # Tab 切换 / 菜单按钮
-│   │   └── main.js            # 入口：初始化与编排
-│   └── images/                # 酒店、头像（man.png / woman.png）等图片
-├── api/                       # 后端 Azure Functions（Node v4）
+├── index.html                 # 根跳转页 → app/trip.html?trip=yunnan2026
+├── app/                        # 数据驱动的多行程平台（唯一前端）
+│   ├── index.html              # 首页：粘贴行程文本生成
+│   ├── trip.html                # 行程详情页（?trip=<ID>）
+│   ├── trip-collections/        # 干净收藏路由（仅 Azure App Service 根路径可用）
+│   ├── css/styles.css
+│   ├── images/
+│   └── js/                      # api/chat/config/editor/photos/render/structure/trip 等模块
+├── api/                        # 后端 Azure Functions（Node v4）
 │   ├── host.json
 │   ├── package.json
 │   ├── .funcignore
 │   ├── local.settings.json    # 本地配置（已 gitignore）
 │   └── src/functions/
-│       ├── state.js           # GET/POST /api/state
-│       ├── upload.js          # POST /api/upload
-│       └── expenses.js        # GET/POST/DELETE /api/expenses
+│       ├── trips.js           # 行程生成/读取/保存/AI 聊天/工具执行
+│       └── upload.js          # POST /api/upload（图片上传，清单附件+照片墙共用）
 ├── docs/
 │   ├── azure-resources.md     # 后端资源创建文档
 │   └── expense-ledger.md      # 平台花销、分摊、结算与兼容规则
@@ -56,113 +43,17 @@ Travel/
 
 ---
 
-## 一、手写云南页前端（`云南/` · GitHub Pages）
-
-> 本节描述旧版单行程手写页面。`app/` 多行程平台及其新版分摊账本见第五节和 [docs/expense-ledger.md](docs/expense-ledger.md)。
-
-### 技术
-- 纯 **HTML + CSS + 原生 JavaScript（ES Modules）**，无框架、无构建步骤。
-- 代码分层：`旅游计划.html` 只管结构；`css/styles.css` 管样式；`js/*.js` 按职责拆成 12 个模块（见目录结构）。
-- 依赖方向：`config/data/utils`（叶子）→ `api/store/status`（中间）→ `checklist/expenses/tabs`（视图）→ `main`（编排），无循环依赖。
-- 响应式布局：宽屏左侧固定侧栏，窄屏用 `☰` 折叠。
-- **左侧栏双 Tab**：📋 预定清单 / 🎒 出行物品。
-- **主内容区双 Tab**：🗺️ 行程（航班、酒店、时间轴、费用表） / 💰 花销（4 人共享时间轴）。
-
-### 交互功能
-| 区域 | 功能 | 说明 |
-|------|------|------|
-| 预定清单 | 勾选完成 | 点击方框切换状态，进度条实时更新 |
-| 预定清单 | 完成人 | 每项输入框，停顿 0.6s 自动保存 |
-| 预定清单 | 附件 | 📎 弹窗填文字说明、上传图片凭证（canvas 压缩到 ≤1000px），点缩略图全屏 |
-| 出行物品 | 勾选准备 | 按路线/季节整理的行李清单，仅勾选（无完成人） |
-| 花销 | 记一笔 | 每人「＋ 添加」→ 金额/说明/时间（默认当前，可用日期组件改） |
-| 花销 | 统一时间轴 | 4 人共享一条从最早到最晚的时间轴，按时间比例定位，横向对比先后 |
-| 花销 | 头像 | 人名前显示 `images/man.png` / `woman.png` |
-| 通用 | 🔄 刷新 | 手动云端同步；切回标签页 / 每 30s 自动同步 |
-
-### 数据流
-1. 页面加载 → 先用 `localStorage` 缓存渲染 → 再 `GET /api/state` 拉云端覆盖；切到花销 Tab 时 `GET /api/expenses`。
-2. 清单改动 → 本地渲染 + `POST /api/state`（附图先 `POST /api/upload` 换成 URL）。
-3. 花销改动 → `POST /api/expenses` 新增 / `DELETE /api/expenses/{id}` 删除。
-4. 断网时自动回退到本地缓存，状态栏显示"离线"。
-
-### 关键配置
-- 后端地址写在 [云南/js/config.js](云南/js/config.js) 顶部：
-  ```js
-  export const API_BASE = 'https://func-yntravel-ue8266.azurewebsites.net/api';
-  ```
-- 预定清单与出行物品在 [云南/js/data.js](云南/js/data.js) 的 `GROUPS` / `PACKING`；花销人物与头像在 `config.js` 的 `PEOPLE` / `PERSON_ICON`（`id` 为唯一键，不要随意改动已有 id）。
-
-### 修改与发布
-1. 按需编辑 `云南/旅游计划.html`（结构）、`云南/css/styles.css`（样式）或 `云南/js/*.js`（逻辑/数据）。
-2. 本地预览：**ES 模块不能用 `file://` 直接双击打开**，请用本地服务器：
-   ```powershell
-   python -m http.server 3000 -d 云南   # 然后访问 http://localhost:3000/旅游计划.html
-   ```
-   （`http://localhost:3000` 已在后端 CORS 白名单中，本地也能联调云端）。
-3. 同步为首页：`Copy-Item "云南/旅游计划.html" "云南/index.html" -Force`
-4. 提交推送：`git add -A; git commit -m "..."; git push`，GitHub Pages（https）自动更新（约 1 分钟）。
-
-> 也可以直接用 skill：`/deploy-travel-app`，见下文。
-
----
-
-## 二、手写云南页后端（Azure Functions + Storage）
-
-### 技术
-- **Azure Functions**（Node 22，v4 编程模型，Linux 消费计划）。
-- **Azure Table Storage** 存清单状态与花销；**Azure Blob Storage** 存图片。
-- 通过 **CORS** 只允许 GitHub Pages 域名调用。
-
-### API
-以下 `/state`、`/upload`、`/expenses` 接口主要服务于 `云南/` 手写页面；`app/` 平台接口见第五节。
-
-| 方法 | 路由 | 作用 | 请求体 | 返回 |
-|------|------|------|--------|------|
-| GET | `/api/state` | 读取全部清单 | — | `{ items: { [id]: {done,who,note,img} } }` |
-| POST | `/api/state` | 写入/更新一项 | `{ id, done, who, note, img }` | `{ ok: true }` |
-| POST | `/api/upload` | 上传图片 | `{ id, dataUrl }` | `{ url }` |
-| GET | `/api/expenses` | 读取全部花销 | — | `{ items: [ {id,person,amount,note,time} ] }` |
-| POST | `/api/expenses` | 新增/更新一笔 | `{ id?, person, amount, note, time }` | `{ id }` |
-| DELETE | `/api/expenses/{id}` | 删除一笔 | — | `{ ok: true }` |
-
-### 数据模型
-- Table `checklist`：`PartitionKey = "yn"`，`RowKey = 条目 id`，字段 `done/who/note/img`。
-- Table `expenses`：`PartitionKey = "yn"`，`RowKey = 花销 id`，字段 `person/amount/note/time`。
-- Blob 容器 `proofs`：公开只读，图片文件名 `{id}-{timestamp}.jpg`。
-
-### 本地运行
-```powershell
-node .tmp-local-dev-server.mjs
-# 平台：http://localhost:5173/app/trip-collections/?trip=yunnan2026
-# API：http://localhost:7071/api
-```
-
-本地平台不调用 Production Function。它使用 `config/environments/local.json` 指定的 `rg-yn-travel-local` / `stynlocal2zf050`，通过被 Git 忽略的 `.storage_local` 直接访问 Local Storage；LLM 配置来自被忽略的 `.llm_token_local`。Local 没有 Function App 或 App Service，浏览器标题会增加 `[Local]`。
-
-非秘密资源配置位于 `config/environments/prod.json` 和 `local.json`。部署脚本默认 `-Environment local`，只测试和校验；发布线上资源必须显式传入 `-Environment prod`。
-
-### 部署
-```powershell
-cd api
-func azure functionapp publish func-yntravel-ue8266
-```
-
-> 也可以直接用 skill：`/deploy-travel-app`。
-
----
-
-## 三、常用命令速查
+## 一、常用命令速查
 
 ```powershell
 # 前端本地预览（任意静态服务器）
-npx serve 云南
+npx serve app
 
 # 后端发布
 cd api; func azure functionapp publish func-yntravel-ue8266
 
-# 测试 API
-Invoke-RestMethod "https://func-yntravel-ue8266.azurewebsites.net/api/state"
+# 测试 API（yunnan2026 行程）
+Invoke-RestMethod "https://func-yntravel-ue8266.azurewebsites.net/api/trips/yunnan2026"
 
 # 查看云端资源
 az resource list -g rg-yn-travel -o table
@@ -170,7 +61,7 @@ az resource list -g rg-yn-travel -o table
 
 ---
 
-## 四、自动化 Skills
+## 二、自动化 Skills
 
 | Skill | 用途 |
 |-------|------|
@@ -190,16 +81,16 @@ az resource list -g rg-yn-travel -o table
 
 ---
 
-## 五、行程生成平台（`app/`）与新增功能
+## 三、行程生成平台（`app/`）与新增功能
 
-除了手写的云南页（`云南/`），仓库新增了一套**数据驱动的多行程平台** `app/`（与云南页完全隔离）：首页输入行程文本 → `trip.html?trip=<ID>` 渲染。
+除了 `app/` 首页生成流程，仓库现在只有这一套**数据驱动的多行程平台**：首页输入行程文本 → `trip.html?trip=<ID>` 渲染。历史手写云南页（`云南/`）已删除，其内容已迁移为 trip **`yunnan2026`**（见下表）。
 
 ### 新增功能清单
 | 功能 | 说明 | 相关文件 |
 |------|------|---------|
 | 🤖 AI 行程助手 | 右下角机器人按钮 → 右侧聊天框，用自然语言对行程/清单/物品/花销增删改查；**删除二次确认**；思考时 loading 旋转；完成后无刷新自动更新并提示去哪个标签查看 | `app/js/chat.js`、`api/src/functions/trips.js`（`/chat`） |
-| 云南行程导入平台 | 手写云南数据已转成平台 Schema，存为 trip **`yunnan2026`** | — |
-| 预定清单附件 | 平台清单补齐与云南页一致的**📎 附件**（完成人 / 文字说明 / 图片凭证，图片经 `/api/upload` 存 Blob） | `app/js/render.js`、`app/js/trip.js`、`app/js/api.js` |
+| 云南行程导入平台 | 手写云南页数据已迁移为平台 Schema，存为 trip **`yunnan2026`**（原静态页已删除） | — |
+| 预定清单附件 | 平台清单自带**📎 附件**（完成人 / 文字说明 / 图片凭证，图片经 `/api/upload` 存 Blob） | `app/js/render.js`、`app/js/trip.js`、`app/js/api.js` |
 | 🎨 多模板风格 | resort/ocean/sunset/minimal 四套，右上角切换，云端持久化 | `app/js/trip.js` |
 | 💰 花销分摊账本 | 动态同行人；付款人与承担人分离；平均/自定义分摊；实际付款、实际承担、净余额和建议结算；时间线与可排序表格；旧记录兼容 | `app/js/expense-model.js`、`app/js/trip.js`、[完整说明](docs/expense-ledger.md) |
 | 🖼️ 照片墙 MVP | 新增照片墙 Tab；支持全局上传、按 destination / timeline item 自动关联、照片墙展示、Lightbox 查看与编辑 caption/destination/关联对象；右侧桌面端 Three.js/CSS3D 旋转照片球与筛选联动 | `app/js/photos.js`、`app/js/trip.js`、`app/js/render.js`、`app/css/styles.css` |

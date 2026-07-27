@@ -25,9 +25,9 @@ Use this skill for frontend interface work: new screens, component polish, layou
 8. Verify the final UI in the browser when possible, including at least one desktop and one mobile-sized viewport for visible layout work.
 
 ## Travel App Notes
-- This repo has static frontend surfaces under `app/` and `云南/`; avoid introducing a frontend build step unless the task clearly needs one.
+- This repo's frontend lives under `app/` (data-driven multi-trip platform); avoid introducing a frontend build step unless the task clearly needs one.
 - Keep shared behavior in existing JS modules and keep CSS close to the current naming/style conventions.
-- For visual updates, check both the canonical app surface and any mirrored/static served page that the deployment flow expects.
+- For visual updates, check both GitHub Pages and the Azure App Service mirror (`yntravel-site-ue8266`) that the deployment flow expects.
 
 ## Validation Checklist
 - [ ] Text does not overflow, clip, or overlap at mobile and desktop sizes.

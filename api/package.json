@@ -1,7 +1,7 @@
 {
   "name": "yn-travel-api",
   "version": "1.0.0",
-  "description": "Backend API for Yunnan travel checklist",
+  "description": "Backend API for the Travel app platform (trips, expenses, chat, uploads)",
   "main": "src/functions/*.js",
   "scripts": {
     "test": "node --test test/**/*.test.js"

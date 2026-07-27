@@ -50,17 +50,6 @@ if ($Environment -eq 'local') {
 
 if (-not $Config.functionApp) { throw 'Production config is missing functionApp.' }
 
-# Derive Function App name from API_BASE (js/config.js, fallback to the HTML)
-function Get-FunctionAppName {
-  foreach ($f in @("app/js/config.js", "云南/js/config.js", "云南/旅游计划.html")) {
-    if (Test-Path $f) {
-      $text = Get-Content -LiteralPath $f -Raw
-      if ($text -match "https://([a-z0-9-]+)\.azurewebsites\.net/api") { return $Matches[1] }
-    }
-  }
-  throw "Could not find API_BASE Function App name in js/config.js or the HTML"
-}
-
 function Publish-FunctionAppZip([string]$FunctionApp, [string]$ResourceGroup) {
   Push-Location "api"
   try {
@@ -105,8 +94,6 @@ function Publish-FunctionAppZip([string]$FunctionApp, [string]$ResourceGroup) {
 
 if ($Scope -in @('frontend', 'all')) {
   Write-Host "`n=== Frontend → GitHub Pages ===" -ForegroundColor Green
-  Copy-Item "云南/旅游计划.html" "云南/index.html" -Force
-  Write-Host "Synced 云南/index.html"
   git add -A
   # Only commit if there are staged changes
   $pending = git status --porcelain
@@ -131,8 +118,8 @@ if ($Scope -in @('backend', 'all')) {
 
   Write-Host "`nSmoke-testing API (cold start may take a moment)..." -ForegroundColor Cyan
   try {
-    $r = Invoke-RestMethod "https://$func.azurewebsites.net/api/state" -TimeoutSec 90
-    Write-Host "API OK: $($r | ConvertTo-Json -Compress)" -ForegroundColor Green
+    $r = Invoke-RestMethod "https://$func.azurewebsites.net/api/trips/yunnan2026" -TimeoutSec 90
+    Write-Host "API OK: sections=$($r.trip.sections.Count)" -ForegroundColor Green
   } catch {
     Write-Warning "Smoke test failed: $($_.Exception.Message)"
   }

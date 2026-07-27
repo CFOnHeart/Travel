@@ -29,7 +29,6 @@ $ErrorActionPreference = 'Stop'
 # Repo root = four levels up from scripts folder
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..\..")).Path
 Set-Location $RepoRoot
-$Html = "云南/旅游计划.html"
 $ConfigPath = Join-Path $RepoRoot "config/environments/$Environment.json"
 if (-not (Test-Path $ConfigPath)) { throw "Missing environment config: $ConfigPath" }
 $Config = Get-Content $ConfigPath -Raw | ConvertFrom-Json
@@ -44,13 +43,12 @@ function Assert-Login {
 }
 
 function Get-FunctionAppName {
-  foreach ($f in @("云南/js/config.js", $Html)) {
-    if (Test-Path $f) {
-      $text = Get-Content $f -Raw
-      if ($text -match "https://([a-z0-9-]+)\.azurewebsites\.net/api") { return $Matches[1] }
-    }
+  $f = "app/js/config.js"
+  if (Test-Path $f) {
+    $text = Get-Content $f -Raw
+    if ($text -match "https://([a-z0-9-]+)\.azurewebsites\.net/api") { return $Matches[1] }
   }
-  throw "Could not find API_BASE Function App name in js/config.js or $Html"
+  throw "Could not find API_BASE Function App name in $f"
 }
 
 function Set-Cors($func, $rg) {
@@ -76,8 +74,8 @@ function Publish-Code($func) {
 function Test-Api($func) {
   Write-Host "Smoke-testing (cold start may take a moment)..." -ForegroundColor Cyan
   try {
-    $r = Invoke-RestMethod "https://$func.azurewebsites.net/api/state" -TimeoutSec 90
-    Write-Host "API OK: $($r | ConvertTo-Json -Compress)" -ForegroundColor Green
+    $r = Invoke-RestMethod "https://$func.azurewebsites.net/api/trips/yunnan2026" -TimeoutSec 90
+    Write-Host "API OK: sections=$($r.trip.sections.Count)" -ForegroundColor Green
   } catch { Write-Warning "Smoke test failed: $($_.Exception.Message)" }
 }
 
@@ -92,7 +90,7 @@ if ($Environment -eq 'local') {
     az storage account create -n $Config.storageAccount -g $ResourceGroup -l $Location --sku Standard_LRS --allow-blob-public-access true | Out-Null
   }
   $connection = az storage account show-connection-string -g $ResourceGroup -n $Config.storageAccount --query connectionString -o tsv
-  foreach ($table in @('trips', 'ratelimit', 'checklist', 'expenses', 'expenseAnalysis')) {
+  foreach ($table in @('trips', 'ratelimit', 'expenseAnalysis')) {
     az storage table create --name $table --connection-string $connection | Out-Null
   }
   az storage container create --name proofs --public-access blob --connection-string $connection | Out-Null
@@ -128,7 +126,7 @@ if ($Mode -eq 'new') {
 
   # Rewrite API_BASE in the frontend config (js/config.js)
   $newBase = "https://$func.azurewebsites.net/api"
-  $cfg = "云南/js/config.js"
+  $cfg = "app/js/config.js"
   (Get-Content $cfg -Raw) -replace "https://[a-z0-9-]+\.azurewebsites\.net/api", $newBase |
     Set-Content $cfg -NoNewline
   Write-Host "Frontend API_BASE updated to $newBase in js/config.js" -ForegroundColor Yellow
